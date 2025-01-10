@@ -1,0 +1,57 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="kiflashrom.c" />
+    <ClCompile Include="ftdi\mpsse_spi_mini\ftdi_infra.c">
+      <Filter>mpsse_mini_spi</Filter>
+    </ClCompile>
+    <ClCompile Include="ftdi\mpsse_spi_mini\ftdi_mid.c">
+      <Filter>mpsse_mini_spi</Filter>
+    </ClCompile>
+    <ClCompile Include="ftdi\mpsse_spi_mini\ftdi_spi.c">
+      <Filter>mpsse_mini_spi</Filter>
+    </ClCompile>
+    <ClCompile Include="jedec_manufacturers.c" />
+    <ClCompile Include="chips\at45.c">
+      <Filter>chips</Filter>
+    </ClCompile>
+    <ClCompile Include="chips\fm25.c">
+      <Filter>chips</Filter>
+    </ClCompile>
+    <ClCompile Include="utils.c" />
+    <ClCompile Include="chips\generic.c">
+      <Filter>chips</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="ftdi\mpsse_spi_mini\ftdi_common.h">
+      <Filter>mpsse_mini_spi</Filter>
+    </ClInclude>
+    <ClInclude Include="ftdi\mpsse_spi_mini\ftdi_infra.h">
+      <Filter>mpsse_mini_spi</Filter>
+    </ClInclude>
+    <ClInclude Include="ftdi\mpsse_spi_mini\ftdi_mid.h">
+      <Filter>mpsse_mini_spi</Filter>
+    </ClInclude>
+    <ClInclude Include="jedec_manufacturers.h" />
+    <ClInclude Include="chips\at45.h">
+      <Filter>chips</Filter>
+    </ClInclude>
+    <ClInclude Include="chips\fm25.h">
+      <Filter>chips</Filter>
+    </ClInclude>
+    <ClInclude Include="kiflashrom.h" />
+    <ClInclude Include="utils.h" />
+    <ClInclude Include="chips\generic.h">
+      <Filter>chips</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="mpsse_mini_spi">
+      <UniqueIdentifier>{75037348-77a5-49db-bf2a-bea7e911e9fa}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="chips">
+      <UniqueIdentifier>{cbe1e4d1-11dd-47b7-9ed6-a76d33a94485}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>
