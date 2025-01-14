@@ -257,3 +257,101 @@ BOOL kull_m_file_writeGeneric(PCWSTR szFileName, LPCVOID pbData, DWORD cbData, D
 
 	return status;
 }
+
+const PCWSTR FT_K_DEVICES_NAMES[] = {
+	L"FT_DEVICE_BM", L"FT_DEVICE_AM", L"FT_DEVICE_100AX", L"FT_DEVICE_UNKNOWN", L"FT_DEVICE_2232C", L"FT_DEVICE_232R", L"FT_DEVICE_2232H", L"FT_DEVICE_4232H",
+	L"FT_DEVICE_232H", L"FT_DEVICE_X_SERIES", L"FT_DEVICE_4222H_0", L"FT_DEVICE_4222H_1_2", L"FT_DEVICE_4222H_3", L"FT_DEVICE_4222_PROG", L"FT_DEVICE_900", L"FT_DEVICE_930",
+	L"FT_DEVICE_UMFTPD3A", L"FT_DEVICE_2233HP", L"FT_DEVICE_4233HP", L"FT_DEVICE_2232HP", L"FT_DEVICE_4232HP", L"FT_DEVICE_233HP", L"FT_DEVICE_232HP", L"FT_DEVICE_2232HA",
+	L"FT_DEVICE_4232HA",
+};
+
+FT_STATUS FT_K_DescribeChannel(DWORD index)
+{
+	FT_STATUS status;
+	FT_DEVICE_LIST_INFO_NODE chanInfo;
+
+	status = SPI_GetChannelInfo(index, &chanInfo);
+	if (FT_SUCCESS(status))
+	{
+		kprintf(L"Device # %lu\n"
+			L"\xc3 LocId       : 0x%08lx\n"
+			L"\xc3 Flags       : 0x%08lx",
+			index, chanInfo.LocId, chanInfo.Flags
+		);
+		if (chanInfo.Flags & FT_FLAGS_OPENED)
+		{
+			kprintf(L" - OPENED");
+		}
+		if (chanInfo.Flags & FT_FLAGS_HISPEED)
+		{
+			kprintf(L" - HISPEED");
+		}
+		kprintf(L"\n"
+			L"\xc3 Type        : 0x%08lx - %s\n"
+			L"\xc3 ID          : 0x%08lx (VID 0x%04x - PID 0x%04x)\n"
+			L"\xc3 SerialNumber: %.16S\n"
+			L"\xc0 Description : %.64S\n\n",
+			chanInfo.Type, (chanInfo.Type <= ARRAYSIZE(FT_K_DEVICES_NAMES)) ? FT_K_DEVICES_NAMES[chanInfo.Type] : L"?",
+			chanInfo.ID, (WORD)(chanInfo.ID >> 16), (WORD)chanInfo.ID,
+			chanInfo.SerialNumber,
+			chanInfo.Description
+		);
+	}
+	else PRINT_FT_ERROR(L"SPI_GetChannelInfo", status);
+
+	return status;
+}
+
+FT_STATUS FT_K_SelectChannel(int argc, wchar_t* argv[], FT_HANDLE* pHandle)
+{
+	FT_STATUS status;
+	DWORD numChannels, i = 0;
+	LPCWSTR device;
+
+	if (GET_CLI_ARG(L"device", &device))
+	{
+		i = wcstoul(device, NULL, 0);
+		kprintf(L"> Using explicit device number: %s (# %lu)\n", device, i);
+		status = FT_K_DescribeChannel(i);
+	}
+	else
+	{
+		status = SPI_GetNumChannels(&numChannels);
+		if (FT_SUCCESS(status))
+		{
+			if (!numChannels)
+			{
+				PRINT_ERROR(L"No channel available (?)\n");
+				status = FT_DEVICE_NOT_FOUND;
+			}
+			else if (numChannels == 1)
+			{
+				kprintf(L"> Using implicit device number # 0\n");
+				i = 0;
+				status = FT_K_DescribeChannel(i);
+			}
+			else
+			{
+				kprintf(L"> Multiple devices are available, consider using /device:_number_ from this list:\n\n");
+				for (i = 0; (i < numChannels) && FT_SUCCESS(status); i++)
+				{
+					status = FT_K_DescribeChannel(i);
+				}
+				i = 0;
+				kprintf(L"> Device # 0 will be used by default\n");
+			}
+		}
+		else PRINT_FT_ERROR(L"SPI_GetNumChannels", status);
+	}
+
+	if (FT_SUCCESS(status))
+	{
+		status = SPI_OpenChannel(i, pHandle);
+		if (!FT_SUCCESS(status))
+		{
+			PRINT_FT_ERROR(L"SPI_OpenChannel", status);
+		}
+	}
+
+	return status;
+}

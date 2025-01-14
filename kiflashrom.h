@@ -13,12 +13,13 @@
 #include "chips/generic.h"
 #include "chips/fm25.h"
 #include "chips/at45.h"
+#include "chips/w25.h"
 
 #define SPI_CONFIG_DEFAULT_FREQUENCY	5000000
 
 #define JEDEC_ReadId	0x9f
 #define JEDEC_Continuation_Code 0x7f
-#define JEDEC_ReadId_MAX_Banks	(2* ARRAYSIZE(JEDEC_BANKS_MANUFACTURERS)) // we want to avoid a endless 0x7f loop
+#define JEDEC_ReadId_MAX_Banks	(2* ARRAYSIZE(JEDEC_BANKS_MANUFACTURERS)) // we want to avoid an endless 0x7f loop
 
 #define COMPARED_READ_ITERATIONS	5
 
@@ -28,3 +29,4 @@ FT_STATUS Read_ID(FT_HANDLE handle, DWORD* pUID);
 void GenericComparedRead(FT_HANDLE handle, PKSIMPLE_READ SimpleRead, DWORD Size, PCWSTR filename);
 void FM25V0x(FT_HANDLE handle, PKSIMPLE_READ* pSimpleRead, DWORD* pSize);
 void AT45DBx(FT_HANDLE handle, PKSIMPLE_READ* pSimpleRead, DWORD* pSize);
+void W25X(FT_HANDLE handle, DWORD UID, PKSIMPLE_READ* pSimpleRead, DWORD* pSize);

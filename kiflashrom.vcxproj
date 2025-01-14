@@ -70,6 +70,7 @@
     <ClCompile Include="chips\at45.c" />
     <ClCompile Include="chips\fm25.c" />
     <ClCompile Include="chips\generic.c" />
+    <ClCompile Include="chips\w25.c" />
     <ClCompile Include="ftdi\mpsse_spi_mini\ftdi_infra.c" />
     <ClCompile Include="ftdi\mpsse_spi_mini\ftdi_mid.c" />
     <ClCompile Include="ftdi\mpsse_spi_mini\ftdi_spi.c" />
@@ -81,12 +82,16 @@
     <ClInclude Include="chips\at45.h" />
     <ClInclude Include="chips\fm25.h" />
     <ClInclude Include="chips\generic.h" />
+    <ClInclude Include="chips\w25.h" />
     <ClInclude Include="ftdi\mpsse_spi_mini\ftdi_common.h" />
     <ClInclude Include="ftdi\mpsse_spi_mini\ftdi_infra.h" />
     <ClInclude Include="ftdi\mpsse_spi_mini\ftdi_mid.h" />
     <ClInclude Include="jedec_manufacturers.h" />
     <ClInclude Include="kiflashrom.h" />
     <ClInclude Include="utils.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="README.md" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

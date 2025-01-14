@@ -22,6 +22,9 @@
     <ClCompile Include="chips\generic.c">
       <Filter>chips</Filter>
     </ClCompile>
+    <ClCompile Include="chips\w25.c">
+      <Filter>chips</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ftdi\mpsse_spi_mini\ftdi_common.h">
@@ -45,6 +48,9 @@
     <ClInclude Include="chips\generic.h">
       <Filter>chips</Filter>
     </ClInclude>
+    <ClInclude Include="chips\w25.h">
+      <Filter>chips</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="mpsse_mini_spi">
@@ -53,5 +59,8 @@
     <Filter Include="chips">
       <UniqueIdentifier>{cbe1e4d1-11dd-47b7-9ed6-a76d33a94485}</UniqueIdentifier>
     </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="README.md" />
   </ItemGroup>
 </Project>

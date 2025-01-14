@@ -7,6 +7,7 @@
 #include <windows.h>
 #include <stdio.h>
 #include "ftd2xx.h"
+#include "libmpsse_spi.h"
 
 typedef struct _DUAL_STRING_FT_STATUS {
 	PCWSTR	name;
@@ -53,3 +54,6 @@ BOOL kull_m_crypto_hash_sha256(LPCVOID pcvData, DWORD cbData, BYTE Hash[32]);
 #define kull_m_file_writeData(szFileName, pbData, cbData)	kull_m_file_writeGeneric(szFileName, pbData, cbData, 0)
 
 BOOL kull_m_file_writeGeneric(PCWSTR szFileName, LPCVOID pbData, DWORD cbData, DWORD dwFlags);
+
+FT_STATUS FT_K_DescribeChannel(DWORD index);
+FT_STATUS FT_K_SelectChannel(int argc, wchar_t* argv[], FT_HANDLE* pHandle);

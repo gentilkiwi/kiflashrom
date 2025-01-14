@@ -8,9 +8,8 @@
 int wmain(int argc, wchar_t* argv[])
 {
 	FT_STATUS status;
-	FT_DEVICE_LIST_INFO_NODE chanInfo;
 	FT_HANDLE handle;
-	DWORD libmpsse = 0, libftd2xx = 0, numChannels = 0;
+	DWORD libmpsse = 0, libftd2xx = 0;
 	ChannelConfig config = { SPI_CONFIG_DEFAULT_FREQUENCY, 10, SPI_CONFIG_OPTION_MODE0 | SPI_CONFIG_OPTION_CS_DBUS3 | SPI_CONFIG_OPTION_CS_ACTIVELOW };
 	DWORD UID;
 	LPCWSTR frequency, filename, size;
@@ -61,78 +60,58 @@ int wmain(int argc, wchar_t* argv[])
 		kprintf(L"\n");
 	}
 	
-	status = SPI_GetNumChannels(&numChannels);
+	status = FT_K_SelectChannel(argc, argv, &handle);
 	if (FT_SUCCESS(status))
 	{
-		if (numChannels)
+		kprintf(L"SPI:\n"L"\xc0 SPI ClockRate: %lu Hz\n", config.ClockRate);
+		status = SPI_InitChannel(handle, &config);
+		if (FT_SUCCESS(status))
 		{
-			if (numChannels > 1)
-			{
-				kprintf(L"> Channels: %lu, using the first one...\n", numChannels);
-			}
-
-			status = SPI_GetChannelInfo(0, &chanInfo);
+			status = Read_ID(handle, &UID);
 			if (FT_SUCCESS(status))
 			{
-				kprintf(L"SPI:\n"
-					L"\xc3 SPI Channel  : %S\n", chanInfo.Description);
-				status = SPI_OpenChannel(0, &handle);
-				if (FT_SUCCESS(status))
+				kprintf(L"\nUID: 0x%08x, JEDEC ID:\n"
+					L"\xc3 Bank# %hhu, Manufacturer# %hhu (hex/p: 0x%02X), Name: %S\n"
+					L"\xc3 DeviceID : 0x%04hX\n",
+					UID,
+					CHIP_UID_TO_BANK(UID), CHIP_UID_TO_MANUFACTURER(UID), CHIP_UID_TO_MANUFACTURER(UID) | (!parity8(CHIP_UID_TO_MANUFACTURER(UID)) << 7), CHIP_UID_TO_MANUFACTURER_NAME(UID),
+					CHIP_UID_TO_DEVICEID(UID)
+				);
+
+				kprintf(L"\xc0 Chip name: ");
+				switch (UID)
 				{
-					kprintf(L"\xc0 SPI ClockRate: %lu Hz\n", config.ClockRate);
-					status = SPI_InitChannel(handle, &config);
-					if (FT_SUCCESS(status))
-					{
-						status = Read_ID(handle, &UID);
-						if (FT_SUCCESS(status))
-						{
-							kprintf(L"\nUID: 0x%08x, JEDEC ID:\n"
-								L"\xc3 Bank# %hhu, Manufacturer# %hhu (hex/p: 0x%02X), Name: %S\n"
-								L"\xc3 DeviceID : 0x%04hX\n",
-								UID,
-								CHIP_UID_TO_BANK(UID), CHIP_UID_TO_MANUFACTURER(UID), CHIP_UID_TO_MANUFACTURER(UID) | (!parity8(CHIP_UID_TO_MANUFACTURER(UID)) << 7), CHIP_UID_TO_MANUFACTURER_NAME(UID),
-								CHIP_UID_TO_DEVICEID(UID)
-							);
-
-							kprintf(L"\xc0 Chip name: ");
-							switch (UID)
-							{
-							case UID_FM25V02:
-								kprintf(L"FM25V02\n\n");
-								FM25V0x(handle, &SimpleRead, &Size);
-								break;
-							case UID_AT45DB081:
-								kprintf(L"AT45DB081 family\n\n");
-								AT45DBx(handle, &SimpleRead, &Size);
-								break;
-							default:
-								kprintf(L"?\n");
-							}
-
-							if (SimpleRead && Size)
-							{
-								GenericComparedRead(handle, SimpleRead, Size, filename);
-							}
-
-						}
-						else PRINT_FT_ERROR(L"Read_ID", status);
-					}
-					else PRINT_FT_ERROR(L"SPI_InitChannel", status);
-
-					status = SPI_CloseChannel(handle);
+				case UID_FM25V02:
+					kprintf(L"FM25V02\n\n");
+					FM25V0x(handle, &SimpleRead, &Size);
+					break;
+				case UID_AT45DB081:
+					kprintf(L"AT45DB081 family\n\n");
+					AT45DBx(handle, &SimpleRead, &Size);
+					break;
+				case UID_W25X20CL_CV:
+				case UID_W25Q16_DV_JL_JVxxQ:
+				case UID_W25Q32_RV_FVxxG_JVxxQ:
+					W25X(handle, UID, &SimpleRead, &Size);
+					break;
+				default:
+					kprintf(L"?\n");
 				}
-				else PRINT_FT_ERROR(L"SPI_OpenChannel", status);
-			}
-			else PRINT_FT_ERROR(L"SPI_GetChannelInfo", status);
-		}
-		else
-		{
-			kprintf(L"> No channel available\n");
-		}
-	}
-	else PRINT_FT_ERROR(L"SPI_GetNumChannels", status);
 
-	return 0;
+				if (SimpleRead && Size)
+				{
+					GenericComparedRead(handle, SimpleRead, Size, filename);
+				}
+
+			}
+			else PRINT_FT_ERROR(L"Read_ID", status);
+		}
+		else PRINT_FT_ERROR(L"SPI_InitChannel", status);
+
+		status = SPI_CloseChannel(handle);
+	}
+
+	return EXIT_SUCCESS;
 }
 
 FT_STATUS Read_ID(FT_HANDLE handle, DWORD* pUID)
@@ -236,7 +215,7 @@ void GenericComparedRead(FT_HANDLE handle, PKSIMPLE_READ SimpleRead, DWORD Size,
 
 			if (filename)
 			{
-				kprintf(L"\xc0 Output to : %s\n", filename);
+				kprintf(L"\xc0 Output to: %s\n", filename);
 				kull_m_file_writeData(filename, buffer, Size);
 			}
 		}
@@ -255,7 +234,7 @@ void FM25V0x(FT_HANDLE handle, PKSIMPLE_READ* pSimpleRead, DWORD* pSize)
 	*pSimpleRead = FM25_Read;
 	if (!*pSize)
 	{
-		*pSize = 32 * 1024;
+		*pSize = 0x8000; // 32K
 	}
 
 	kprintf(L"FM25V0x tests:\n");
@@ -294,7 +273,7 @@ void AT45DBx(FT_HANDLE handle, PKSIMPLE_READ *pSimpleRead, DWORD *pSize)
 	*pSimpleRead = AT45_Read_LF;
 	if (!*pSize)
 	{
-		*pSize = 1024 * 1024;
+		*pSize = 0x100000; // 1M
 	}
 
 	kprintf(L"AT45DBx tests:\n");
@@ -311,4 +290,49 @@ void AT45DBx(FT_HANDLE handle, PKSIMPLE_READ *pSimpleRead, DWORD *pSize)
 		kprintf(L"\xc0 Read Status: 0x%02hhx\n", Status);
 	}
 	else PRINT_FT_ERROR(L"AT45_Read_Status", status);
+}
+
+void W25X(FT_HANDLE handle, DWORD UID, PKSIMPLE_READ* pSimpleRead, DWORD* pSize)
+{
+	FT_STATUS status;
+	BYTE Status, ChipUID[W25_UNIQUE_ID_SIZE];
+
+	*pSimpleRead = W25_Read_Data;
+	if (!*pSize)
+	{
+		switch(UID)
+		{
+		case UID_W25X20CL_CV:
+			kprintf(L"W25X20CL/CV");
+			*pSize = 0x40000; // 256K
+			break;
+		case UID_W25Q16_DV_JL_JVxxQ:
+			kprintf(L"W25Q16DV/JL/JVxxQ");
+			*pSize = 0x200000; // 2M
+			break;
+		case UID_W25Q32_RV_FVxxG_JVxxQ:
+			kprintf(L"W25Q32RV/FVxxG/JVxxQ");
+			*pSize = 0x400000; // 4M
+			break;
+		default:
+			kprintf(L"?");
+			*pSize = 0;
+		}
+	}
+
+	kprintf(L"\n\nW25x tests:\n");
+	status = W25_Read_Status(handle, &Status);
+	if (FT_SUCCESS(status))
+	{
+		kprintf(L"\xc3 Read Status: 0x%02hhx\n", Status);
+	}
+	else PRINT_FT_ERROR(L"W25_Read_Status", status);
+
+	status = W25_Read_Unique_ID(handle, ChipUID);
+	if (FT_SUCCESS(status))
+	{
+		kprintf(L"\xc0 UID: 0x%016llx / ", *(PULONGLONG)ChipUID);
+		kprinthex(ChipUID, sizeof(ChipUID));
+	}
+	else PRINT_FT_ERROR(L"W25_Read_Unique_ID", status);
 }

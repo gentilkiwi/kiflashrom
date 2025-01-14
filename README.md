@@ -1,6 +1,11 @@
 # kiflashrom
 
-A small personal project designed to read `AT45DB081D` & `FM25V02` memory chips from the Chameleon Mini RevE & RevG.
+A small personal project designed to read memory chips:
+- `AT45DB081D` from the Chameleon Mini RevE
+- `FM25V02` from the Chameleon Mini RevG
+- `W25X20CL` from the Proxmark3 RDV4
+- `W25Q16JV` from the Raspberry Pi Pico (RP2040)
+- `W25Q32RV` from the Raspberry Pi Pico 2 (RP2350)
 
 ## Why?
 - The legendary `flashrom` program has an architecture that seems inherently limited to the first 4 JEDEC banks:
