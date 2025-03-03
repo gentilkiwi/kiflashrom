@@ -36,6 +36,7 @@
     <GenerateManifest>false</GenerateManifest>
     <OutDir>$(SolutionDir)$(Platform)\</OutDir>
     <IntDir>$(Platform)\</IntDir>
+    <EmbedManifest>false</EmbedManifest>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -43,7 +44,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_CONSOLE;FTD2XX_STATIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>ftdi/includes</AdditionalIncludeDirectories>
       <DebugInformationFormat>None</DebugInformationFormat>
@@ -64,13 +65,17 @@
       <GenerateDebugInformation>false</GenerateDebugInformation>
       <AdditionalDependencies>ftdi/dll/ftd2xx.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <LinkErrorReporting>NoErrorReport</LinkErrorReporting>
+      <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="chips\at45.c" />
+    <ClCompile Include="chips\at25.c" />
+    <ClCompile Include="chips\at45db.c" />
     <ClCompile Include="chips\fm25.c" />
     <ClCompile Include="chips\generic.c" />
+    <ClCompile Include="chips\m95.c" />
     <ClCompile Include="chips\w25.c" />
+    <ClCompile Include="chips\zd25ld.c" />
     <ClCompile Include="ftdi\mpsse_spi_mini\ftdi_infra.c" />
     <ClCompile Include="ftdi\mpsse_spi_mini\ftdi_mid.c" />
     <ClCompile Include="ftdi\mpsse_spi_mini\ftdi_spi.c" />
@@ -79,10 +84,13 @@
     <ClCompile Include="utils.c" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="chips\at45.h" />
+    <ClInclude Include="chips\at25.h" />
+    <ClInclude Include="chips\at45db.h" />
     <ClInclude Include="chips\fm25.h" />
     <ClInclude Include="chips\generic.h" />
+    <ClInclude Include="chips\m95.h" />
     <ClInclude Include="chips\w25.h" />
+    <ClInclude Include="chips\zd25ld.h" />
     <ClInclude Include="ftdi\mpsse_spi_mini\ftdi_common.h" />
     <ClInclude Include="ftdi\mpsse_spi_mini\ftdi_infra.h" />
     <ClInclude Include="ftdi\mpsse_spi_mini\ftdi_mid.h" />

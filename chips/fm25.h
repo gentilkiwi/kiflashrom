@@ -23,7 +23,7 @@
 #define FM25_OPCODE_WRDI	0x04 // Reset write enable latch
 #define FM25_OPCODE_RDSR	0x05 // Read Status Register
 #define FM25_OPCODE_WRSR	0x01 // Write Status Register
-#define FM25_OPCODE_READ	0x03 // Read memory data
+#define FM25_OPCODE_READ	0x03 // Read memory data	// GENERIC_OPCODE_READ_DATA
 #define FM25_OPCODE_WRITE	0x02 // Write memory data
 
 #define FM25_OPCODE_FSTRD	0x0b // Fast read memory data
@@ -46,9 +46,3 @@
 #define UID_FM25V10		MAKE_CHIP_UID(FM25V_JEDEC_BANK, FM25V_JEDEC_MANUFACTURER, 0x24, 0x00)
 #define UID_FM25V20		MAKE_CHIP_UID(FM25V_JEDEC_BANK, FM25V_JEDEC_MANUFACTURER, 0x25, 0x00)
 #define UID_FM25V20A	MAKE_CHIP_UID(FM25V_JEDEC_BANK, FM25V_JEDEC_MANUFACTURER, 0x25, 0x08)
-
-FT_STATUS FM25_Write_Enable(FT_HANDLE handle);
-FT_STATUS FM25_Write_Disable(FT_HANDLE handle);
-FT_STATUS FM25_Read_Status(FT_HANDLE handle, BYTE* pStatus);
-FT_STATUS FM25_Write_Status(FT_HANDLE handle, BYTE Status);
-FT_STATUS FM25_Read(FT_HANDLE handle, DWORD address, BYTE* buffer, DWORD size);

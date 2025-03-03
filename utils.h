@@ -10,13 +10,13 @@
 #include "libmpsse_spi.h"
 
 typedef struct _DUAL_STRING_FT_STATUS {
-	PCWSTR	name;
+	PCSTR name;
 	FT_STATUS status;
 } DUAL_STRING_FT_STATUS, * PDUAL_STRING_FT_STATUS;
 
-PCWSTR FT_STATUS_to_NAME(FT_STATUS status);
+PCSTR FT_STATUS_to_NAME(FT_STATUS status);
 
-#define PRINT_FT_ERROR(func, status)	kprintf(L"ERROR " TEXT(__FUNCTION__) L" ; " func L" : %s (%lu)\n", FT_STATUS_to_NAME(status), status)
+#define PRINT_FT_ERROR(func, status)	kprintf(L"ERROR " TEXT(__FUNCTION__) L" ; " func L" : %S (%lu)\n", FT_STATUS_to_NAME(status), status)
 
 BYTE parity8(BYTE x);
 

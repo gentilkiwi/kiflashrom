@@ -5,4 +5,4 @@
 */
 #pragma once
 
-const char* JEDEC_BANKS_MANUFACTURERS[16][126];
+const char* JEDEC_BANKS_MANUFACTURERS[17][126];

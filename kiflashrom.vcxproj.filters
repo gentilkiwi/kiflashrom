@@ -12,7 +12,7 @@
       <Filter>mpsse_mini_spi</Filter>
     </ClCompile>
     <ClCompile Include="jedec_manufacturers.c" />
-    <ClCompile Include="chips\at45.c">
+    <ClCompile Include="chips\at45db.c">
       <Filter>chips</Filter>
     </ClCompile>
     <ClCompile Include="chips\fm25.c">
@@ -23,6 +23,15 @@
       <Filter>chips</Filter>
     </ClCompile>
     <ClCompile Include="chips\w25.c">
+      <Filter>chips</Filter>
+    </ClCompile>
+    <ClCompile Include="chips\m95.c">
+      <Filter>chips</Filter>
+    </ClCompile>
+    <ClCompile Include="chips\at25.c">
+      <Filter>chips</Filter>
+    </ClCompile>
+    <ClCompile Include="chips\zd25ld.c">
       <Filter>chips</Filter>
     </ClCompile>
   </ItemGroup>
@@ -37,7 +46,7 @@
       <Filter>mpsse_mini_spi</Filter>
     </ClInclude>
     <ClInclude Include="jedec_manufacturers.h" />
-    <ClInclude Include="chips\at45.h">
+    <ClInclude Include="chips\at45db.h">
       <Filter>chips</Filter>
     </ClInclude>
     <ClInclude Include="chips\fm25.h">
@@ -49,6 +58,15 @@
       <Filter>chips</Filter>
     </ClInclude>
     <ClInclude Include="chips\w25.h">
+      <Filter>chips</Filter>
+    </ClInclude>
+    <ClInclude Include="chips\m95.h">
+      <Filter>chips</Filter>
+    </ClInclude>
+    <ClInclude Include="chips\at25.h">
+      <Filter>chips</Filter>
+    </ClInclude>
+    <ClInclude Include="chips\zd25ld.h">
       <Filter>chips</Filter>
     </ClInclude>
   </ItemGroup>

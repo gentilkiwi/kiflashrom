@@ -5,7 +5,7 @@
 */
 #include "jedec_manufacturers.h"
 
-const char* JEDEC_BANKS_MANUFACTURERS[16][126] = {
+const char* JEDEC_BANKS_MANUFACTURERS[17][126] = {
 	{ // bank #1
 		{/*   1, 0x01, */ "AMD"},
 		{/*   2, 0x02, */ "AMI" },
@@ -2043,6 +2043,41 @@ const char* JEDEC_BANKS_MANUFACTURERS[16][126] = {
 		{/* 114, 0xF2, */ "KEYSOM" },
 		{/* 115, 0x73, */ "Shenzhen YYF Info Tech Co Ltd" },
 		{/* 116, 0xF4, */ "Sharetronics Data Technology Co Ltd" },
+		{/* 117, 0x75, */ "AptCore Limited" },
+		{/* 118, 0x76, */ "Uchampion Semiconductor Co Ltd" },
+		{/* 119, 0xF7, */ "YCT Semiconductor" },
+		{/* 120, 0xF8, */ "FADU Inc" },
+		{/* 121, 0x79, */ "Hefei CLT Microelectronics Co LTD" },
+		{/* 122, 0x7A, */ "Smart Technologies(BD) Ltd" },
+		{/* 123, 0xFB, */ "Zhangdian District Qunyuan Computer Firm" },
+		{/* 124, 0x7C, */ "Silicon Xpandas Electronics Co Ltd" },
+		{/* 125, 0xFD, */ "PC Components Y Multimedia S" },
+		{/* 126, 0xFE, */ "Shenzhen Tanlr Technology Group Co Ltd"},
+	},
+	{ // bank #17
+		{/*   1, 0x01, */ "Shenzhen JIEQING Technology Co Ltd" },
+		{/*   2, 0x02, */ "Orionix" },
+		{/*   3, 0x83, */ "JoulWatt Technology Co Ltd" },
+		{/*   4, 0x04, */ "Tenstorrent" },
+		{/*   5, 0x85, */ "Unis Flash Memory Technology (Chengdu)" },
+		{/*   6, 0x86, */ "Huatu Stars" },
+		{/*   7, 0x07, */ "Ardor Gaming" },
+		{/*   8, 0x08, */ "QuanZhou KunFang Semiconductor Co Ltd" },
+		{/*   9, 0x89, */ "EIAI PLANET" },
+		{/*  10, 0x8A, */ "Ningbo Lingkai Semiconductor Technology Inc" },
+		{/*  11, 0x0B, */ "Shenzhen Hancun Technology Co Ltd" },
+		{/*  12, 0x8C, */ "Hongkong Manyi Technology Co Limited" },
+		{/*  13, 0x0D, */ "Shenzhen Storgon Technology Co Ltd" },
+		{/*  14, 0x0E, */ "YUNTU Microelectronics" },
+		{/*  15, 0x8F, */ "Essencore" },
+		{/*  16, 0x10, */ "Shenzhen Xingyun Lianchuang Computer Tech" },
+		{/*  17, 0x91, */ "ShenZhen Aoscar Digital Tech Co Ltd" },
+		{/*  18, 0x92, */ "XOC Technologies Inc" },
+		{/*  19, 0x13, */ "BOS Semiconductors" },
+		{/*  20, 0x94, */ "Eliyan Corp" },
+		{/*  21, 0x15, */ "Hangzhou Lishu Technology Co Ltd" },
+		{/*  22, 0x16, */ "Tier IV Inc" },
+		{/*  23, 0x97, */ "Wuhan Xuanluzhe Network Technology Co" },
 		// ...
-	}
+	},
 };

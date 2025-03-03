@@ -10,10 +10,10 @@ int wmain(int argc, wchar_t* argv[])
 	FT_STATUS status;
 	FT_HANDLE handle;
 	DWORD libmpsse = 0, libftd2xx = 0;
-	ChannelConfig config = { SPI_CONFIG_DEFAULT_FREQUENCY, 10, SPI_CONFIG_OPTION_MODE0 | SPI_CONFIG_OPTION_CS_DBUS3 | SPI_CONFIG_OPTION_CS_ACTIVELOW };
+	ChannelConfig config = { .ClockRate = SPI_CONFIG_DEFAULT_FREQUENCY, .LatencyTimer = 10, .configOptions = SPI_CONFIG_OPTION_MODE0 | SPI_CONFIG_OPTION_CS_DBUS3 | SPI_CONFIG_OPTION_CS_ACTIVELOW };
 	DWORD UID;
 	LPCWSTR frequency, filename, size;
-	PKSIMPLE_READ SimpleRead = NULL;
+	BYTE OptAddrSize = GENERIC_OPTION_ADDRNO;
 	DWORD Size = 0;
 
 	status = Ver_libMPSSE(&libmpsse, &libftd2xx);
@@ -24,7 +24,7 @@ int wmain(int argc, wchar_t* argv[])
 	}
 
 	kprintf(L"\n"
-		L"  .#####.          kiflashrom 0.0a ( MPSSE %hx.%hhx.%hhx, D2XX %hx.%hhx.%hhx )\n"
+		L"  .#####.          kiflashrom 0.0b ( MPSSE %hx.%hhx.%hhx, D2XX %hx.%hhx.%hhx )\n"
 		L" .## ^ ##\xda\xc4\xc4\xc4\xc4\xc4\xbf\n"
 		L" ## / \\ \xc4\xb4     \xc3\xc4  /*** Benjamin DELPY `gentilkiwi` ( benjamin@gentilkiwi.com )\n"
 		L" ## \\ / \xc4\xb4 k   \xc3\xc4      > https://blog.gentilkiwi.com\n"
@@ -67,12 +67,13 @@ int wmain(int argc, wchar_t* argv[])
 		status = SPI_InitChannel(handle, &config);
 		if (FT_SUCCESS(status))
 		{
-			status = Read_ID(handle, &UID);
+			status = Generic_Read_ID(handle, &UID);
 			if (FT_SUCCESS(status))
 			{
-				kprintf(L"\nUID: 0x%08x, JEDEC ID:\n"
+				kprintf(L"\nJEDEC JEP106 Read UID (internal is 0x%08x)\n"
 					L"\xc3 Bank# %hhu, Manufacturer# %hhu (hex/p: 0x%02X), Name: %S\n"
-					L"\xc3 DeviceID : 0x%04hX\n",
+					L"\xc3 DeviceID : 0x%04hX\n"
+					L"\xc3 !! double check some manufacturers are not respecting their banks !!\n",
 					UID,
 					CHIP_UID_TO_BANK(UID), CHIP_UID_TO_MANUFACTURER(UID), CHIP_UID_TO_MANUFACTURER(UID) | (!parity8(CHIP_UID_TO_MANUFACTURER(UID)) << 7), CHIP_UID_TO_MANUFACTURER_NAME(UID),
 					CHIP_UID_TO_DEVICEID(UID)
@@ -82,27 +83,35 @@ int wmain(int argc, wchar_t* argv[])
 				switch (UID)
 				{
 				case UID_FM25V02:
-					kprintf(L"FM25V02\n\n");
-					FM25V0x(handle, &SimpleRead, &Size);
+					kprintf(L"FM25V02\n");
+					FM25V0x(handle, &OptAddrSize, &Size);
 					break;
 				case UID_AT45DB081:
-					kprintf(L"AT45DB081 family\n\n");
-					AT45DBx(handle, &SimpleRead, &Size);
+					kprintf(L"AT45DB081 family\n");
+					AT45DBx(handle, &OptAddrSize, &Size);
 					break;
 				case UID_W25X20CL_CV:
 				case UID_W25Q16_DV_JL_JVxxQ:
 				case UID_W25Q32_RV_FVxxG_JVxxQ:
-					W25X(handle, UID, &SimpleRead, &Size);
+					W25X(handle, UID, &OptAddrSize, &Size);
 					break;
+				case UID_M95P32:
+					kprintf(L"M95P32\n");
+					M95(handle, &OptAddrSize, &Size);
+					break;
+				case UID_ZD25LD40:
+					kprintf(L"ZD25LD40\n");
+					ZD25LD(handle, &OptAddrSize, &Size);
+					break;
+
 				default:
 					kprintf(L"?\n");
 				}
 
-				if (SimpleRead && Size)
+				if (OptAddrSize && Size)
 				{
-					GenericComparedRead(handle, SimpleRead, Size, filename);
+					GenericComparedRead(handle, OptAddrSize, Size, filename);
 				}
-
 			}
 			else PRINT_FT_ERROR(L"Read_ID", status);
 		}
@@ -114,62 +123,7 @@ int wmain(int argc, wchar_t* argv[])
 	return EXIT_SUCCESS;
 }
 
-FT_STATUS Read_ID(FT_HANDLE handle, DWORD* pUID)
-{
-	FT_STATUS status;
-	DWORD sizeTransferred;
-	BYTE in_out[2] = { JEDEC_ReadId, };
-	BYTE bank, manufacturer;
-	
-	if (handle && pUID)
-	{
-		status = SPI_ReadWrite(handle, in_out, in_out, 2, &sizeTransferred, SPI_TRANSFER_OPTIONS_CHIPSELECT_ENABLE | SPI_TRANSFER_OPTIONS_SIZE_IN_BYTES);
-		if (FT_SUCCESS(status))
-		{
-			for (
-				bank = 1, manufacturer = in_out[1];
-				(manufacturer == JEDEC_Continuation_Code) && (bank <= JEDEC_ReadId_MAX_Banks) && (status == FT_OK);
-				bank++, manufacturer = in_out[0]
-				)
-			{
-				status = SPI_Read(handle, in_out, 1, &sizeTransferred, SPI_TRANSFER_OPTIONS_SIZE_IN_BYTES);
-			}
-			
-			if (FT_SUCCESS(status))
-			{
-				if (manufacturer)
-				{
-					if (parity8(manufacturer & JEDEC_Continuation_Code) != (manufacturer >> 7))
-					{
-						manufacturer &= JEDEC_Continuation_Code;
-						status = SPI_Read(handle, in_out, 2, &sizeTransferred, SPI_TRANSFER_OPTIONS_SIZE_IN_BYTES);
-						if ((status == FT_OK) && pUID)
-						{
-							*pUID = MAKE_CHIP_UID(bank, manufacturer, in_out[0], in_out[1]);
-						}
-					}
-					else
-					{
-						status = FT_IO_ERROR;
-					}
-				}
-				else
-				{
-					status = FT_INVALID_PARAMETER;
-				}
-			}
-			/*status = */SPI_ToggleCS(handle, FALSE);
-		}
-	}
-	else
-	{
-		status = FT_INVALID_ARGS;
-	}
-
-	return status;
-}
-
-void GenericComparedRead(FT_HANDLE handle, PKSIMPLE_READ SimpleRead, DWORD Size, PCWSTR filename)
+void GenericComparedRead(FT_HANDLE handle, BYTE OptAddrSize, DWORD Size, PCWSTR filename)
 {
 	FT_STATUS status;
 	BYTE *buffer, i, isHashOK = 1, Hash[32], HashToComp[32];
@@ -182,7 +136,7 @@ void GenericComparedRead(FT_HANDLE handle, PKSIMPLE_READ SimpleRead, DWORD Size,
 		for (i = 0; (i < COMPARED_READ_ITERATIONS) && isHashOK; i++)
 		{
 			isHashOK = 0;
-			status = SimpleRead(handle, 0, buffer, Size);
+			status = Generic_Read_Data(handle, OptAddrSize, 0, buffer, Size);
 			if (FT_SUCCESS(status))
 			{
 				kprintf(L"\xc3 Read: %lu byte(s) - SHA2-256(data)= ", Size);
@@ -226,78 +180,34 @@ void GenericComparedRead(FT_HANDLE handle, PKSIMPLE_READ SimpleRead, DWORD Size,
 	else PRINT_ERROR(L"malloc for %lu byte(s)\n", Size);
 }
 
-void FM25V0x(FT_HANDLE handle, PKSIMPLE_READ* pSimpleRead, DWORD* pSize)
+void FM25V0x(FT_HANDLE handle, BYTE* pOptAddrSize, DWORD* pSize)
 {
-	FT_STATUS status;
-	BYTE Status;
+	UNREFERENCED_PARAMETER(handle);
 
-	*pSimpleRead = FM25_Read;
+	*pOptAddrSize = GENERIC_OPTION_ADDR2B;
 	if (!*pSize)
 	{
 		*pSize = 0x8000; // 32K
 	}
-
-	kprintf(L"FM25V0x tests:\n");
-
-	status = FM25_Read_Status(handle, &Status);
-	if (FT_SUCCESS(status))
-	{
-		kprintf(L"\xc3 Read Status: 0x%02hhx\n", Status);
-	}
-	else PRINT_FT_ERROR(L"FM25_Read_Status", status);
-
-	status = FM25_Write_Enable(handle);
-
-	status = FM25_Read_Status(handle, &Status);
-	if (FT_SUCCESS(status))
-	{
-		kprintf(L"\xc3 Read Status: 0x%02hhx\n", Status);
-	}
-	else PRINT_FT_ERROR(L"FM25_Read_Status", status);
-
-	status = FM25_Write_Disable(handle);
-
-	status = FM25_Read_Status(handle, &Status);
-	if (FT_SUCCESS(status))
-	{
-		kprintf(L"\xc3 Read Status: 0x%02hhx\n", Status);
-	}
-	else PRINT_FT_ERROR(L"FM25_Read_Status", status);
 }
 
-void AT45DBx(FT_HANDLE handle, PKSIMPLE_READ *pSimpleRead, DWORD *pSize)
+void AT45DBx(FT_HANDLE handle, BYTE* pOptAddrSize, DWORD *pSize)
 {
-	FT_STATUS status;
-	BYTE Status;
+	UNREFERENCED_PARAMETER(handle);
 
-	*pSimpleRead = AT45_Read_LF;
+	*pOptAddrSize = GENERIC_OPTION_ADDR3B;
 	if (!*pSize)
 	{
 		*pSize = 0x100000; // 1M
 	}
-
-	kprintf(L"AT45DBx tests:\n");
-	status = AT45_Read_Status(handle, &Status);
-	if (FT_SUCCESS(status))
-	{
-		kprintf(L"\xc3 Read Status: 0x%02hhx\n", Status);
-	}
-	else PRINT_FT_ERROR(L"AT45_Read_Status", status);
-
-	status = AT45_Read_Status(handle, &Status);
-	if (FT_SUCCESS(status))
-	{
-		kprintf(L"\xc0 Read Status: 0x%02hhx\n", Status);
-	}
-	else PRINT_FT_ERROR(L"AT45_Read_Status", status);
 }
 
-void W25X(FT_HANDLE handle, DWORD UID, PKSIMPLE_READ* pSimpleRead, DWORD* pSize)
+void W25X(FT_HANDLE handle, DWORD UID, BYTE* pOptAddrSize, DWORD* pSize)
 {
 	FT_STATUS status;
-	BYTE Status, ChipUID[W25_UNIQUE_ID_SIZE];
+	BYTE ChipUID[GENERIC_UNIQUE_ID_SIZE];
 
-	*pSimpleRead = W25_Read_Data;
+	*pOptAddrSize = GENERIC_OPTION_ADDR3B;
 	if (!*pSize)
 	{
 		switch(UID)
@@ -320,19 +230,47 @@ void W25X(FT_HANDLE handle, DWORD UID, PKSIMPLE_READ* pSimpleRead, DWORD* pSize)
 		}
 	}
 
-	kprintf(L"\n\nW25x tests:\n");
-	status = W25_Read_Status(handle, &Status);
-	if (FT_SUCCESS(status))
-	{
-		kprintf(L"\xc3 Read Status: 0x%02hhx\n", Status);
-	}
-	else PRINT_FT_ERROR(L"W25_Read_Status", status);
-
-	status = W25_Read_Unique_ID(handle, ChipUID);
+	status = Generic_Read_Unique_ID(handle, ChipUID);
 	if (FT_SUCCESS(status))
 	{
 		kprintf(L"\xc0 UID: 0x%016llx / ", *(PULONGLONG)ChipUID);
 		kprinthex(ChipUID, sizeof(ChipUID));
 	}
 	else PRINT_FT_ERROR(L"W25_Read_Unique_ID", status);
+}
+
+void M95(FT_HANDLE handle, BYTE* pOptAddrSize, DWORD* pSize)
+{
+	UNREFERENCED_PARAMETER(handle);
+	BYTE b;
+
+	*pOptAddrSize = GENERIC_OPTION_ADDR3B;
+	if (!*pSize)
+	{
+		*pSize = 0x400000; // 4Mb
+	}
+
+	Generic_Read_Data(handle, GENERIC_OPTION_ADDR3B, 0x000000, &b, 1); kprintf(L"%C\n", b);
+	Generic_Read_Data(handle, GENERIC_OPTION_ADDR3B, 0x000001, &b, 1); kprintf(L"%C\n", b);
+	Generic_Read_Data(handle, GENERIC_OPTION_ADDR3B, 0x000002, &b, 1); kprintf(L"%C\n", b);
+}
+
+void ZD25LD(FT_HANDLE handle, BYTE* pOptAddrSize, DWORD* pSize)
+{
+	FT_STATUS status;
+	BYTE ChipUID[GENERIC_UNIQUE_ID_SIZE];
+
+	*pOptAddrSize = GENERIC_OPTION_ADDR3B;
+	if (!*pSize)
+	{
+		*pSize = 0x80000; // 512Kb
+	}
+
+	status = Generic_Read_Unique_ID(handle, ChipUID);
+	if (FT_SUCCESS(status))
+	{
+		kprintf(L"\xc0 UID: 0x%016llx / ", *(PULONGLONG)ChipUID);
+		kprinthex(ChipUID, sizeof(ChipUID));
+	}
+	else PRINT_FT_ERROR(L"ZD25LD_Read_UID", status);
 }
