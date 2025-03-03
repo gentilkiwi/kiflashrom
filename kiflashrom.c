@@ -242,7 +242,6 @@ void W25X(FT_HANDLE handle, DWORD UID, BYTE* pOptAddrSize, DWORD* pSize)
 void M95(FT_HANDLE handle, BYTE* pOptAddrSize, DWORD* pSize)
 {
 	UNREFERENCED_PARAMETER(handle);
-	BYTE b;
 
 	*pOptAddrSize = GENERIC_OPTION_ADDR3B;
 	if (!*pSize)
