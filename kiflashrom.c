@@ -249,10 +249,6 @@ void M95(FT_HANDLE handle, BYTE* pOptAddrSize, DWORD* pSize)
 	{
 		*pSize = 0x400000; // 4Mb
 	}
-
-	Generic_Read_Data(handle, GENERIC_OPTION_ADDR3B, 0x000000, &b, 1); kprintf(L"%C\n", b);
-	Generic_Read_Data(handle, GENERIC_OPTION_ADDR3B, 0x000001, &b, 1); kprintf(L"%C\n", b);
-	Generic_Read_Data(handle, GENERIC_OPTION_ADDR3B, 0x000002, &b, 1); kprintf(L"%C\n", b);
 }
 
 void ZD25LD(FT_HANDLE handle, BYTE* pOptAddrSize, DWORD* pSize)
