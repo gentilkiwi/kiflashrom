@@ -73,7 +73,7 @@ int wmain(int argc, wchar_t* argv[])
 				kprintf(L"\nJEDEC JEP106 Read UID (internal is 0x%08x)\n"
 					L"\xc3 Bank# %hhu, Manufacturer# %hhu (hex/p: 0x%02X), Name: %S\n"
 					L"\xc3 DeviceID : 0x%04hX\n"
-					L"\xc3 !! double check some manufacturers are not respecting their banks !!\n",
+					L"\xc3 !! double check: some manufacturers are not respecting their banks !!\n",
 					UID,
 					CHIP_UID_TO_BANK(UID), CHIP_UID_TO_MANUFACTURER(UID), CHIP_UID_TO_MANUFACTURER(UID) | (!parity8(CHIP_UID_TO_MANUFACTURER(UID)) << 7), CHIP_UID_TO_MANUFACTURER_NAME(UID),
 					CHIP_UID_TO_DEVICEID(UID)
