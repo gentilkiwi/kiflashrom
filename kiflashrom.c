@@ -28,7 +28,7 @@ int wmain(int argc, wchar_t* argv[])
 		L" .## ^ ##\xda\xc4\xc4\xc4\xc4\xc4\xbf\n"
 		L" ## / \\ \xc4\xb4     \xc3\xc4  /*** Benjamin DELPY `gentilkiwi` ( benjamin@gentilkiwi.com )\n"
 		L" ## \\ / \xc4\xb4 k   \xc3\xc4      > https://blog.gentilkiwi.com\n"
-		L" '## v  \xc4\xb4   f \xc3\xc4\n"
+		L" '## v  \xc4\xb4   f \xc3\xc4   ***/\n"
 		L"  '#### \xc4\xb4     \xc3\xc4\n"
 		L"         \xc0\xc4\xc4\xc4\xc4\xc4\xd9\n\n",
 		(WORD)(libmpsse >> 16), (BYTE)(libmpsse >> 8), (BYTE)(libmpsse), (WORD)(libftd2xx >> 16), (BYTE)(libftd2xx >> 8), (BYTE)(libftd2xx));
