@@ -31,14 +31,34 @@
 /*								Include files					  			  */
 /******************************************************************************/
 #define FTDI_EXPORTS
-#include "ftd2xx.h"
 #include "ftdi_infra.h"		/*Common portable infrastructure(datatypes, libraries, etc)*/
 #include "ftdi_common.h"	/*Common across I2C, SPI, JTAG modules*/
 #include "ftdi_mid.h"		/*Midlayer specific specific*/
+#include "string.h"
 
 #ifndef FT_GetNumChannel
 #define FT_GetNumChannel FT_CreateDeviceInfoList
 #endif
+
+/******************************************************************************/
+/*								Macro defines					  			  */
+/******************************************************************************/
+
+
+
+
+/******************************************************************************/
+/*								Local function declarations					  */
+/******************************************************************************/
+
+
+
+
+/******************************************************************************/
+/*								Global variables							  */
+/******************************************************************************/
+
+
 
 /******************************************************************************/
 /*						Public function definitions						  */
@@ -126,7 +146,8 @@ FT_STATUS FT_GetNumChannels(FT_LegacyProtocol Protocol, DWORD *numChans)
 	return status;
 }
 
-FT_STATUS FT_GetChannelInfo(FT_LegacyProtocol Protocol, DWORD index, FT_DEVICE_LIST_INFO_NODE *chanInfo)
+FT_STATUS FT_GetChannelInfo(FT_LegacyProtocol Protocol, DWORD index,
+			FT_DEVICE_LIST_INFO_NODE *chanInfo)
 {
 	(void)Protocol;
 
@@ -205,7 +226,8 @@ FT_STATUS FT_GetChannelInfo(FT_LegacyProtocol Protocol, DWORD index, FT_DEVICE_L
  * \note Trying to open an already open channel will return an error code
  * \warning
  */
-FT_STATUS FT_OpenChannel(FT_LegacyProtocol Protocol, DWORD index, FT_HANDLE *handle)
+FT_STATUS FT_OpenChannel(FT_LegacyProtocol Protocol, DWORD index,
+			FT_HANDLE *handle)
 {
 	(void)Protocol;
 
@@ -294,7 +316,13 @@ FT_STATUS FT_OpenChannel(FT_LegacyProtocol Protocol, DWORD index, FT_HANDLE *han
  * \note
  * \warning
  */
-FT_STATUS FT_InitChannel(FT_LegacyProtocol Protocol, FT_HANDLE handle, DWORD clockRate, DWORD latencyTimer, DWORD configOptions, DWORD Pin)
+FT_STATUS FT_InitChannel(
+	FT_LegacyProtocol Protocol, 
+	FT_HANDLE handle,
+	uint32 clockRate, 
+	uint32 latencyTimer, 
+	uint32 configOptions,
+	DWORD Pin)
 {
 	(void)configOptions;
 
@@ -302,6 +330,7 @@ FT_STATUS FT_InitChannel(FT_LegacyProtocol Protocol, FT_HANDLE handle, DWORD clo
 	FT_DEVICE ftDevice;
 
 	FN_ENTER;
+
 
 	/*Check parameters*/
 	if ((clockRate < MIN_CLOCK_RATE) 
@@ -394,7 +423,6 @@ FT_STATUS FT_InitChannel(FT_LegacyProtocol Protocol, FT_HANDLE handle, DWORD clo
 FT_STATUS FT_CloseChannel(FT_LegacyProtocol Protocol, FT_HANDLE handle)
 {
 	(void)Protocol;
-
 	FT_STATUS status;
 	FN_ENTER;
 	status = FT_Close(handle);
@@ -420,7 +448,8 @@ FT_STATUS FT_CloseChannel(FT_LegacyProtocol Protocol, FT_HANDLE handle)
 
 
 
-FT_STATUS FT_Channel_Read(FT_LegacyProtocol Protocol, FT_HANDLE handle, DWORD noOfBytes, BYTE* buffer, DWORD* noOfBytesTransferred)
+FT_STATUS FT_Channel_Read(FT_LegacyProtocol Protocol, FT_HANDLE handle,
+				DWORD noOfBytes, uint8* buffer, LPDWORD noOfBytesTransferred)
 {
 	(void)Protocol;
 
@@ -431,6 +460,8 @@ FT_STATUS FT_Channel_Read(FT_LegacyProtocol Protocol, FT_HANDLE handle, DWORD no
 
 	FN_EXIT;
     return status;
+
+
 }
 
 /*!
@@ -448,7 +479,8 @@ FT_STATUS FT_Channel_Read(FT_LegacyProtocol Protocol, FT_HANDLE handle, DWORD no
  * \note
  * \warning
  */
-FT_STATUS FT_Channel_Write(FT_LegacyProtocol Protocol, FT_HANDLE handle, DWORD noOfBytes, BYTE* buffer, DWORD* noOfBytesTransferred)
+FT_STATUS FT_Channel_Write(FT_LegacyProtocol Protocol, FT_HANDLE handle,
+			DWORD noOfBytes, uint8* buffer, LPDWORD noOfBytesTransferred)
 {
 	(void)Protocol;
 
@@ -469,11 +501,11 @@ FT_STATUS FT_Channel_Write(FT_LegacyProtocol Protocol, FT_HANDLE handle, DWORD n
 *\Param[in] FT_DEVICE_LIST_INFO_NODE device info node wich contains the information about the device
 *\return bool return a boolean value
 */
-BYTE Mid_CheckMPSSEAvailable(FT_DEVICE_LIST_INFO_NODE devList)
+bool Mid_CheckMPSSEAvailable(FT_DEVICE_LIST_INFO_NODE devList)
 {
 	FT_STATUS status = FT_OK;
 	(void)status;
-	BYTE isMPSSEAvailable = MID_NO_MPSSE;
+	bool isMPSSEAvailable = MID_NO_MPSSE;
 	FN_ENTER;
 
 	size_t  los = strlen(devList.Description);
@@ -598,7 +630,8 @@ FT_STATUS Mid_SetUSBParameters(FT_HANDLE handle, DWORD inputBufSize, DWORD outpu
  * \note
  * \warning
  */
-FT_STATUS Mid_SetDeviceSpecialChar(FT_HANDLE handle, UCHAR eventCh, UCHAR eventStatus, UCHAR errorCh, UCHAR errorStatus)
+FT_STATUS Mid_SetDeviceSpecialChar(FT_HANDLE handle, UCHAR eventCh,
+						UCHAR eventStatus, UCHAR errorCh, UCHAR errorStatus)
 {
 	FT_STATUS status;
 	
@@ -868,7 +901,7 @@ FT_STATUS Mid_SendReceiveCmdFromMPSSE(FT_HANDLE handle, UCHAR echoCmdFlag, UCHAR
  * \note
  * \warning
  */
-FT_STATUS Mid_SetGPIOLow(FT_HANDLE handle, BYTE value, BYTE direction)
+FT_STATUS Mid_SetGPIOLow(FT_HANDLE handle, uint8 value, uint8 direction)
 {
 	FT_STATUS status = FT_OK;
 	(void)status;
@@ -916,14 +949,14 @@ FT_STATUS Mid_GetFtDeviceType(FT_HANDLE handle, FT_DEVICE *ftDevice)
  * \note
  * \warning
  */
-FT_STATUS Mid_SetClock(FT_HANDLE handle, FT_DEVICE ftDevice, DWORD clock)
+FT_STATUS Mid_SetClock(FT_HANDLE handle, FT_DEVICE ftDevice, uint32 clock)
 
 {
     UCHAR inputBuffer[10];
 	DWORD bytesWritten = 0;
 	DWORD bufIdx = 0;
-	BYTE valueH, valueL;
-	DWORD value;
+	uint8 valueH, valueL;
+	uint32 value;
 	FT_STATUS status;
 
 	FN_ENTER;
@@ -963,8 +996,8 @@ FT_STATUS Mid_SetClock(FT_HANDLE handle, FT_DEVICE ftDevice, DWORD clock)
 			break;
 	}
 	/*calculate valueH and ValueL*/
-	valueL = (BYTE)value;
-	valueH = (BYTE)(value>>8);
+	valueL = (uint8)value;
+	valueH = (uint8)(value>>8);
 	/*set the clock*/
     inputBuffer[bufIdx++] = MID_SET_CLOCK_FREQUENCY_CMD;
 	DBG(MSG_DEBUG,"valueL = 0x%x valueH = 0x%x \n", valueL, valueH);
@@ -986,7 +1019,7 @@ FT_STATUS Mid_SetClock(FT_HANDLE handle, FT_DEVICE ftDevice, DWORD clock)
  * \note
  * \warning
  */
-FT_STATUS Mid_SetDeviceLoopbackState(FT_HANDLE handle, BYTE loopBackFlag)
+FT_STATUS Mid_SetDeviceLoopbackState(FT_HANDLE handle, uint8 loopBackFlag)
 {
 	FT_STATUS status;
     UCHAR inputBuffer[10];
@@ -1006,7 +1039,7 @@ FT_STATUS Mid_SetDeviceLoopbackState(FT_HANDLE handle, BYTE loopBackFlag)
 	status = FT_Write(handle, inputBuffer, bufIdx, &bytesWritten);
 	
 	FN_EXIT;
-
+	
 	return status;
 }
 
@@ -1079,10 +1112,10 @@ FT_STATUS Mid_EmptyDeviceInputBuff(FT_HANDLE handle)
  * \note
  * \warning
  */
-FTDIMPSSE_API FT_STATUS FT_WriteGPIO(FT_HANDLE handle, BYTE dir, BYTE value)
+FTDIMPSSE_API FT_STATUS FT_WriteGPIO(FT_HANDLE handle, uint8 dir, uint8 value)
 {
 	FT_STATUS status;
-	BYTE buffer[3];
+	uint8 buffer[3];
 	DWORD bytesWritten = 0;
 	DWORD bufIdx = 0;
 
@@ -1110,10 +1143,10 @@ FTDIMPSSE_API FT_STATUS FT_WriteGPIO(FT_HANDLE handle, BYTE dir, BYTE value)
  * \note The directions of the GPIO pins have to be first set to input mode using FT_WriteGPIO
  * \warning
  */
-FTDIMPSSE_API FT_STATUS FT_ReadGPIO(FT_HANDLE handle, BYTE *value)
+FTDIMPSSE_API FT_STATUS FT_ReadGPIO(FT_HANDLE handle, uint8 *value)
 {
 	FT_STATUS status;
-	BYTE buffer[2];
+	uint8 buffer[2];
 	DWORD bytesTransfered = 0;
 	DWORD bytesToTransfer = 0;
 	UCHAR readBuffer[10];

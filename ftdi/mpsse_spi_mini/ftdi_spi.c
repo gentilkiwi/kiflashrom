@@ -156,7 +156,7 @@ static FT_STATUS SPI_DisplayList(void);
  * \note
  * \warning
  */
-static FT_STATUS SPI_Write8bits(FT_HANDLE handle, BYTE byte, BYTE len, BYTE lsb);
+static FT_STATUS SPI_Write8bits(FT_HANDLE handle, uint8 byte, uint8 len, uint8 lsb);
 
 /*!
  * \brief Reads 8 or less bits to the SPI device
@@ -172,7 +172,7 @@ static FT_STATUS SPI_Write8bits(FT_HANDLE handle, BYTE byte, BYTE len, BYTE lsb)
  * \note
  * \warning
  */
-static FT_STATUS SPI_Read8bits(FT_HANDLE handle, BYTE*byte, BYTE len, BYTE lsb);
+static FT_STATUS SPI_Read8bits(FT_HANDLE handle, uint8 *byte, uint8 len, uint8 lsb);
 
 /******************************************************************************/
 /*								Global variables							  */
@@ -241,10 +241,10 @@ FTDIMPSSE_API FT_STATUS SPI_OpenChannel(DWORD index, FT_HANDLE *handle)
 FTDIMPSSE_API FT_STATUS SPI_InitChannel(FT_HANDLE handle, ChannelConfig *config)
 {
 	FT_STATUS status;
-	BYTE buffer[5];
-	DWORD noOfBytes = 0;
+	uint8 buffer[5];
+	uint32 noOfBytes = 0;
 	DWORD noOfBytesTransferred;
-	BYTE mode;
+	uint8 mode;
 	FN_ENTER;
 #ifdef ENABLE_PARAMETER_CHECKING
 	CHECK_NULL_RET(config);
@@ -294,22 +294,22 @@ FTDIMPSSE_API FT_STATUS SPI_InitChannel(FT_HANDLE handle, ChannelConfig *config)
 
 
 	/* Copy initial state values to present state variable */
-	config->currentPinState = (WORD)config->Pin;
+	config->currentPinState = (uint16)config->Pin;
 
 	DBG(MSG_DEBUG,"handle = 0x%x ClockRate=%u LatencyTimer=%u Options = 0x%x\n",\
 		(unsigned)handle,(unsigned)config->ClockRate,	\
 		(unsigned)config->LatencyTimer,(unsigned)config->configOptions);
 
-	status = FT_InitChannel(SPI, handle,(DWORD)config->ClockRate,	\
-		(DWORD)config->LatencyTimer,(DWORD)config->configOptions,
-		(DWORD)config->Pin);
+	status = FT_InitChannel(SPI, handle,(uint32)config->ClockRate,	\
+		(uint32)config->LatencyTimer,(uint32)config->configOptions,
+		(uint32)config->Pin);
 	CHECK_STATUS(status);
 	if (FT_OK == status)
 	{
 		/* Set the directions and values to the lines */
 		buffer[noOfBytes++] = MPSSE_CMD_SET_DATA_BITS_LOWBYTE;/*MPSSE command*/
-		buffer[noOfBytes++] = (BYTE)((config->currentPinState & 0xFF00)>>8);
-		buffer[noOfBytes++] = (BYTE)(config->currentPinState & 0x00FF); /*Dir*/
+		buffer[noOfBytes++] = (uint8)((config->currentPinState & 0xFF00)>>8);
+		buffer[noOfBytes++] = (uint8)(config->currentPinState & 0x00FF); /*Dir*/
 		status = FT_Channel_Write(SPI, handle, noOfBytes, buffer,\
 			&noOfBytesTransferred);
 		CHECK_STATUS(status);
@@ -367,9 +367,11 @@ FTDIMPSSE_API FT_STATUS SPI_Read(FT_HANDLE handle, UCHAR *buffer,
 {
 	FT_STATUS status;
 	ChannelConfig* config = NULL;
-	BYTE byte;
-	BYTE bitsToTransfer = 0;
-	BYTE lsb = 0;
+	//uint32 i;
+	uint8 byte;
+	uint8 bitsToTransfer = 0;
+	uint8 lsb = 0;
+
 	
 	FN_ENTER;
 #ifdef ENABLE_PARAMETER_CHECKING
@@ -380,9 +382,6 @@ FTDIMPSSE_API FT_STATUS SPI_Read(FT_HANDLE handle, UCHAR *buffer,
 	LOCK_CHANNEL(handle);
 	status = SPI_GetChannelConfig(handle, &config);
 	CHECK_STATUS(status);
-	/* Mode is given by bit1-bit0 of ChannelConfig.Options */
-	DBG(MSG_DEBUG, "configOptions = 0x%x\n", (unsigned)config->configOptions);
-	DBG(MSG_DEBUG, "LatencyTimer=%u\n", (unsigned)config->LatencyTimer);
 
 	if (transferOptions & SPI_TRANSFER_OPTIONS_LSB_FIRST)
 	{
@@ -415,9 +414,9 @@ FTDIMPSSE_API FT_STATUS SPI_Read(FT_HANDLE handle, UCHAR *buffer,
 	else
 	{/*sizeToTransfer is in bytes*/
 		DWORD noOfBytesTransferred = 0, CurrentXferSize = 0;
-		BYTE cmdBuffer[4];
+		uint8 cmdBuffer[4];
 		//ChannelConfig *config = NULL;
-		BYTE mode;
+		uint8 mode;
 
 		/*status = SPI_GetChannelConfig(handle, &config);
 		CHECK_STATUS(status);*/
@@ -448,9 +447,9 @@ FTDIMPSSE_API FT_STATUS SPI_Read(FT_HANDLE handle, UCHAR *buffer,
 		
 			CurrentXferSize = ((sizeToTransfer - *sizeTransferred) > 64*1024)? 64*1024:(sizeToTransfer - *sizeTransferred);
 			/* length LSB */
-			cmdBuffer[1] = (BYTE)((CurrentXferSize-1) & 0x000000FF) ;
+			cmdBuffer[1] = (uint8)((CurrentXferSize-1) & 0x000000FF) ;
 			/* length MSB */
-			cmdBuffer[2] = (BYTE)(((CurrentXferSize-1) & 0x0000FF00)>>8);
+			cmdBuffer[2] = (uint8)(((CurrentXferSize-1) & 0x0000FF00)>>8);
 
 			/*Command MPSSE to send data to PC immediately */
 			cmdBuffer[3] = MPSSE_CMD_SEND_IMMEDIATE;
@@ -484,19 +483,20 @@ FTDIMPSSE_API FT_STATUS SPI_Read(FT_HANDLE handle, UCHAR *buffer,
 		(unsigned)(transferOptions & SPI_TRANSFER_OPTIONS_CHIPSELECT_ENABLE),
 		(unsigned)(transferOptions & SPI_TRANSFER_OPTIONS_CHIPSELECT_DISABLE));
 	FN_EXIT;
-
 	return status;
 }
 
-FTDIMPSSE_API FT_STATUS SPI_Write(FT_HANDLE handle, UCHAR *buffer, DWORD sizeToTransfer, LPDWORD sizeTransferred, DWORD transferOptions)
+FTDIMPSSE_API FT_STATUS SPI_Write(FT_HANDLE handle, UCHAR *buffer,
+	DWORD sizeToTransfer, LPDWORD sizeTransferred, DWORD transferOptions)
 {
 	FT_STATUS status;
 	ChannelConfig *config = NULL;
-	BYTE byte;
-	BYTE bitsToTransfer = 0;
-	BYTE lsb = 0;
+	uint8 byte;
+	uint8 bitsToTransfer = 0;
 
+	uint8 lsb = 0;
 	FN_ENTER;
+
 #ifdef ENABLE_PARAMETER_CHECKING
 	CHECK_NULL_RET(handle);
 	CHECK_NULL_RET(buffer);
@@ -540,9 +540,9 @@ FTDIMPSSE_API FT_STATUS SPI_Write(FT_HANDLE handle, UCHAR *buffer, DWORD sizeToT
 	else
 	{/* sizeToTransfer is in bytes */
 		DWORD noOfBytesTransferred = 0, CurrentXferSize = 0;
-		BYTE cmdBuffer[3];
+		uint8 cmdBuffer[3];
 		//ChannelConfig *config = NULL;
-		BYTE mode;
+		uint8 mode;
 
 		/*status = SPI_GetChannelConfig(handle, &config);
 		CHECK_STATUS(status);*/
@@ -571,16 +571,19 @@ FTDIMPSSE_API FT_STATUS SPI_Write(FT_HANDLE handle, UCHAR *buffer, DWORD sizeToT
 		
 		while(*sizeTransferred < sizeToTransfer)
 		{
+
 			CurrentXferSize = ((sizeToTransfer - *sizeTransferred) > 64*1024)? 64*1024:(sizeToTransfer - *sizeTransferred);
 			/* length low byte */
-			cmdBuffer[1] = (BYTE)((CurrentXferSize-1) & 0x000000FF);
+			cmdBuffer[1] = (uint8)((CurrentXferSize-1) & 0x000000FF);
 			/* length high byte */
-			cmdBuffer[2] = (BYTE)(((CurrentXferSize-1) & 0x0000FF00)>>8);
+			cmdBuffer[2] = (uint8)(((CurrentXferSize-1) & 0x0000FF00)>>8);
 			/* write command */
-			status = FT_Channel_Write(SPI, handle, 3, cmdBuffer, &noOfBytesTransferred);
+			status = FT_Channel_Write(SPI, handle, 3, cmdBuffer,\
+				&noOfBytesTransferred);
 			CHECK_STATUS(status);
 			/* write data */
-			status = FT_Channel_Write(SPI, handle, CurrentXferSize, buffer, &noOfBytesTransferred);
+			status = FT_Channel_Write(SPI, handle, CurrentXferSize, buffer,\
+				&noOfBytesTransferred);
 			*sizeTransferred += noOfBytesTransferred;
 			
 			CHECK_STATUS(status);
@@ -614,8 +617,7 @@ FTDIMPSSE_API FT_STATUS SPI_ReadWrite(FT_HANDLE handle, UCHAR *inBuffer,
 	UCHAR mode;
 	UCHAR bitsToTransfer = 0;
 	DWORD noOfBytesTransferred = 0;
-	UCHAR cmdBuffer[10];
-
+	UCHAR cmdBuffer[3]; // BUG in MPSSE 1.0.8, temp. fix
 	FN_ENTER;
 
 #ifdef ENABLE_PARAMETER_CHECKING
@@ -624,6 +626,12 @@ FTDIMPSSE_API FT_STATUS SPI_ReadWrite(FT_HANDLE handle, UCHAR *inBuffer,
 	CHECK_NULL_RET(outBuffer);
 	CHECK_NULL_RET(sizeTransferred);
 #endif
+
+	if(sizeToTransfer == 0)
+	{
+		DBG(MSG_ERR,"invalid Transfer size(%d)\n",sizeToTransfer);
+		return FT_INVALID_PARAMETER;
+	}
 
 	LOCK_CHANNEL(handle);
 	status = SPI_GetChannelConfig(handle, &config);
@@ -672,7 +680,7 @@ FTDIMPSSE_API FT_STATUS SPI_ReadWrite(FT_HANDLE handle, UCHAR *inBuffer,
 			cmdBuffer[2] = outBuffer[(*sizeTransferred+1)/8];
 
 			/*Write command and data*/
-			status = FT_Channel_Write(SPI, handle, 3, cmdBuffer,\
+			status = FT_Channel_Write(SPI, handle, sizeof(cmdBuffer), cmdBuffer,\
 				&noOfBytesTransferred);
 			CHECK_STATUS(status);
 			if (3 > noOfBytesTransferred)
@@ -698,7 +706,7 @@ FTDIMPSSE_API FT_STATUS SPI_ReadWrite(FT_HANDLE handle, UCHAR *inBuffer,
 	}
 	else
 	{
-		DWORD CurrentXferSize = 0;
+		uint32 CurrentXferSize = 0;
 		/* Command to write 8bits */
 		switch(mode)
 		{
@@ -732,15 +740,15 @@ FTDIMPSSE_API FT_STATUS SPI_ReadWrite(FT_HANDLE handle, UCHAR *inBuffer,
 		
 			CurrentXferSize = ((sizeToTransfer - *sizeTransferred) > 64*1024)? 64*1024:(sizeToTransfer - *sizeTransferred);
 			/* length LSB */
-			cmdBuffer[1] = (BYTE)((CurrentXferSize-1) & 0x000000FF) ;
+			cmdBuffer[1] = (uint8)((CurrentXferSize-1) & 0x000000FF) ;
 			/* length MSB */
-			cmdBuffer[2] = (BYTE)(((CurrentXferSize-1) & 0x0000FF00)>>8);
+			cmdBuffer[2] = (uint8)(((CurrentXferSize-1) & 0x0000FF00)>>8);
 			//cmdBuffer[3] = MPSSE_CMD_SEND_IMMEDIATE;
 
 //			memcpy(&cmdBuffer[3],outBuffer, CurrentXferSize);
 			
 			/*Write command*/					
-			status = FT_Channel_Write(SPI, handle, 3,cmdBuffer,
+			status = FT_Channel_Write(SPI, handle, sizeof(cmdBuffer),cmdBuffer,
 				&noOfBytesTransferred);
 			CHECK_STATUS(status);
 			noOfBytesTransferred = 0;
@@ -845,7 +853,7 @@ FTDIMPSSE_API FT_STATUS SPI_IsBusy(FT_HANDLE handle, BYTE*state)
 {
 	FT_STATUS status = FT_OTHER_ERROR;
 	DWORD noOfBytes = 0, noOfBytesTransferred = 0;
-	BYTE buffer[10];
+	uint8 buffer[10];
 
 	FN_ENTER;
 	/*Enable CS*/
@@ -877,10 +885,10 @@ FTDIMPSSE_API FT_STATUS SPI_IsBusy(FT_HANDLE handle, BYTE*state)
 FTDIMPSSE_API FT_STATUS SPI_ChangeCS(FT_HANDLE handle, DWORD configOptions)
 {
 	FT_STATUS status = FT_OTHER_ERROR;
-	BYTE mode;
+	uint8 mode;
 #if 1
-	BYTE buffer[5];
-	DWORD noOfBytes = 0;
+	uint8 buffer[5];
+	uint32 noOfBytes = 0;
 	DWORD noOfBytesTransferred;
 #endif
 	ChannelConfig *config = NULL;
@@ -920,8 +928,8 @@ FTDIMPSSE_API FT_STATUS SPI_ChangeCS(FT_HANDLE handle, DWORD configOptions)
 	}
 
 	buffer[noOfBytes++] = MPSSE_CMD_SET_DATA_BITS_LOWBYTE;/* MPSSE command */
-	buffer[noOfBytes++] = (BYTE)((config->currentPinState & 0xFF00)>>8);/*Val*/
-	buffer[noOfBytes++] = (BYTE)(config->currentPinState & 0x00FF); /*Dir*/
+	buffer[noOfBytes++] = (uint8)((config->currentPinState & 0xFF00)>>8);/*Val*/
+	buffer[noOfBytes++] = (uint8)(config->currentPinState & 0x00FF); /*Dir*/
 
 	status = FT_Channel_Write(SPI, handle, noOfBytes, buffer,\
 			&noOfBytesTransferred);
@@ -937,12 +945,12 @@ FTDIMPSSE_API FT_STATUS SPI_ChangeCS(FT_HANDLE handle, DWORD configOptions)
 FT_STATUS SPI_ToggleCS(FT_HANDLE handle, BYTE state)
 {
 	ChannelConfig *config = NULL;
-	BYTE activeLow;
+	bool activeLow;
 	FT_STATUS status = FT_OTHER_ERROR;
-	BYTE buffer[5];
-	DWORD i = 0;
+	uint8 buffer[5];
+	uint32 i = 0;
 	DWORD noOfBytesTransferred;
-	BYTE value, oldValue, direction;
+	uint8 value, oldValue, direction;
 
 	FN_ENTER;
 	
@@ -973,14 +981,14 @@ FT_STATUS SPI_ToggleCS(FT_HANDLE handle, BYTE state)
 		(unsigned)config->configOptions,(unsigned)activeLow);
 
 	//direction = (uint8)config->currentPinState;/*get current state*/
-	direction = (BYTE)(config->currentPinState & 0x00FF);//20110718
+	direction = (uint8)(config->currentPinState & 0x00FF);//20110718
 	direction |= \
 		((1<<((config->configOptions & SPI_CONFIG_OPTION_CS_MASK)>>2))<<3);
 	DBG(MSG_DEBUG,"config->currentPinState = 0x%x direction = 0x%x\n",
 		(unsigned)config->currentPinState,(unsigned)direction);
 
 	//oldValue = (uint8)(8>>config->currentPinState);
-	oldValue =  (BYTE)((config->currentPinState & 0xFF00)>>8);//20110718
+	oldValue =  (uint8)((config->currentPinState & 0xFF00)>>8);//20110718
 	value = ((1<<((config->configOptions & SPI_CONFIG_OPTION_CS_MASK)>>2))<<3);
 
 	DBG(MSG_DEBUG,"oldValue = 0x%x value = 0x%x\n", oldValue, value);
@@ -990,7 +998,7 @@ FT_STATUS SPI_ToggleCS(FT_HANDLE handle, BYTE state)
 	if ((TRUE == state && TRUE == activeLow) || (FALSE == state && FALSE == activeLow))
 		value = oldValue & ~value;/* set the CS line low */
 
-	config->currentPinState = ((WORD)value<<8) | direction;/*save  dirn & value*/
+	config->currentPinState = ((uint16)value<<8) | direction;/*save  dirn & value*/
 	DBG(MSG_DEBUG,"config->currentPinState = 0x%x\n",
 		(unsigned)config->currentPinState);
 
@@ -1210,6 +1218,7 @@ static FT_STATUS SPI_DisplayList(void)
 			printf("\ttempNode->config->ClockRate=%u\n",
 				(unsigned)tempNode->config.ClockRate);
 		}
+		status = FT_OK;
 	}
 	printf("------------------------------------------------------\n");
 	FN_EXIT;
@@ -1217,13 +1226,13 @@ static FT_STATUS SPI_DisplayList(void)
 }
 #endif
 
-static FT_STATUS SPI_Write8bits(FT_HANDLE handle, BYTE byte, BYTE len, BYTE lsb)
+static FT_STATUS SPI_Write8bits(FT_HANDLE handle, uint8 byte, uint8 len, uint8 lsb)
 {
 	FT_STATUS status = FT_OTHER_ERROR;
 	DWORD noOfBytes = 0, noOfBytesTransferred = 0;
-	BYTE buffer[10];
+	uint8 buffer[10];
 	ChannelConfig *config = NULL;
-	BYTE mode;
+	uint8 mode;
 	FN_ENTER;
 
 	status = SPI_GetChannelConfig(handle, &config);
@@ -1260,13 +1269,13 @@ static FT_STATUS SPI_Write8bits(FT_HANDLE handle, BYTE byte, BYTE len, BYTE lsb)
 	return status;
 }
 
-static FT_STATUS SPI_Read8bits(FT_HANDLE handle, BYTE*byte, BYTE len, BYTE lsb)
+static FT_STATUS SPI_Read8bits(FT_HANDLE handle, uint8 *byte, uint8 len, uint8 lsb)
 {
 	FT_STATUS status = FT_OTHER_ERROR;
 	DWORD noOfBytes = 0, noOfBytesTransferred = 0;
-	BYTE buffer[10];
+	uint8 buffer[10];
 	ChannelConfig *config = NULL;
-	BYTE mode;
+	uint8 mode;
 
 	FN_ENTER;
 	status = SPI_GetChannelConfig(handle, &config);

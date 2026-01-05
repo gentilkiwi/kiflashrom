@@ -76,32 +76,50 @@ extern "C" {
 
 #define MID_LEN_MAX_ERROR_STRING		500
 
-#define MID_CHK_IN_BUF_OK(size)	{if (size > MID_MAX_IN_BUF_SIZE) { return FT_INSUFFICIENT_RESOURCES;}}
+#define MID_CHK_IN_BUF_OK(size)	{if (size > MID_MAX_IN_BUF_SIZE) \
+	{ return FT_INSUFFICIENT_RESOURCES;}}
 
 FT_STATUS FT_GetNumChannels(FT_LegacyProtocol Protocol, DWORD *numChans);
-FT_STATUS FT_GetChannelInfo(FT_LegacyProtocol Protocol, DWORD index, FT_DEVICE_LIST_INFO_NODE *chanInfo);
-FT_STATUS FT_OpenChannel(FT_LegacyProtocol Protocol, DWORD index, FT_HANDLE *handle);
-FT_STATUS FT_InitChannel(FT_LegacyProtocol Protocol, FT_HANDLE handle, DWORD clockRate, DWORD latencyTimer, DWORD configOptions, DWORD Pin);					
-FT_STATUS FT_CloseChannel(FT_LegacyProtocol Protocol, FT_HANDLE handle);
-FT_STATUS FT_Channel_Read(FT_LegacyProtocol Protocol, FT_HANDLE handle, DWORD noOfBytes, BYTE* buffer, DWORD* noOfBytesTransferred);
-FT_STATUS FT_Channel_Write(FT_LegacyProtocol Protocol, FT_HANDLE handle, DWORD noOfBytes, BYTE* buffer, DWORD* noOfBytesTransferred);
+FT_STATUS FT_GetChannelInfo(FT_LegacyProtocol Protocol, DWORD index,
+			FT_DEVICE_LIST_INFO_NODE *chanInfo);
+FT_STATUS FT_OpenChannel(FT_LegacyProtocol Protocol, DWORD index,
+			FT_HANDLE *handle);
 
-BYTE Mid_CheckMPSSEAvailable(FT_DEVICE_LIST_INFO_NODE);
+
+FT_STATUS FT_InitChannel(		
+	FT_LegacyProtocol Protocol,	
+	FT_HANDLE handle,			
+	uint32 clockRate,			
+	uint32 latencyTimer,		
+	uint32 configOptions,		
+	DWORD Pin);					
+
+FT_STATUS FT_CloseChannel(FT_LegacyProtocol Protocol, FT_HANDLE handle);
+FT_STATUS FT_Channel_Read(FT_LegacyProtocol Protocol, FT_HANDLE handle,
+				DWORD noOfBytes, uint8* buffer, LPDWORD noOfBytesTransferred);
+FT_STATUS FT_Channel_Write(FT_LegacyProtocol Protocol, FT_HANDLE handle,
+			DWORD noOfBytes, uint8* buffer, LPDWORD noOfBytesTransferred);
+bool Mid_CheckMPSSEAvailable(FT_DEVICE_LIST_INFO_NODE);
 
 FT_STATUS Mid_ResetDevice(FT_HANDLE handle);
 FT_STATUS Mid_PurgeDevice (FT_HANDLE handle);
-FT_STATUS Mid_SetUSBParameters(FT_HANDLE handle, DWORD inputBufSize, DWORD outputBufSize);
-FT_STATUS Mid_SetDeviceSpecialChar(FT_HANDLE handle, UCHAR eventCh, UCHAR eventStatus, UCHAR errorCh, UCHAR errorStatus);
-FT_STATUS Mid_SetDeviceTimeOut(FT_HANDLE handle, DWORD rdTimeOut, DWORD wrTimeOut);
+FT_STATUS Mid_SetUSBParameters(FT_HANDLE handle, DWORD inputBufSize,
+										DWORD outputBufSize);
+FT_STATUS Mid_SetDeviceSpecialChar(FT_HANDLE handle,
+			UCHAR eventCh, UCHAR eventStatus,
+			UCHAR errorCh, UCHAR errorStatus);
+FT_STATUS Mid_SetDeviceTimeOut(FT_HANDLE handle,
+										DWORD rdTimeOut, DWORD wrTimeOut);
 FT_STATUS Mid_SetLatencyTimer (FT_HANDLE handle, UCHAR milliSecond);
 FT_STATUS Mid_ResetMPSSE(FT_HANDLE handle);
 FT_STATUS Mid_EnableMPSSEIn(FT_HANDLE handle);
 FT_STATUS Mid_SyncMPSSE(FT_HANDLE handle);
-FT_STATUS Mid_SendReceiveCmdFromMPSSE(FT_HANDLE handle, UCHAR echoCmdFlag, UCHAR ecoCmd, UCHAR *cmdEchoed);
-FT_STATUS Mid_SetGPIOLow(FT_HANDLE handle, BYTE value, BYTE direction);
-FT_STATUS Mid_SetClock(FT_HANDLE handle, FT_DEVICE ftDevice, DWORD clock);
+FT_STATUS Mid_SendReceiveCmdFromMPSSE(FT_HANDLE handle, 
+			UCHAR echoCmdFlag, UCHAR ecoCmd, UCHAR *cmdEchoed);
+FT_STATUS Mid_SetGPIOLow(FT_HANDLE handle, uint8 value, uint8 direction);
+FT_STATUS Mid_SetClock(FT_HANDLE handle, FT_DEVICE ftDevice, uint32 clock);
 FT_STATUS Mid_GetFtDeviceType(FT_HANDLE handle, FT_DEVICE *ftDevice);
-FT_STATUS Mid_SetDeviceLoopbackState(FT_HANDLE handle, BYTE loopBackFlag);
+FT_STATUS Mid_SetDeviceLoopbackState(FT_HANDLE handle, uint8 loopBackFlag);
 FT_STATUS Mid_EmptyDeviceInputBuff(FT_HANDLE handle);
 
 #ifdef __cplusplus
