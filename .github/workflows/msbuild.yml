@@ -4,6 +4,7 @@ on: [workflow_dispatch, push, pull_request]
 env:
   BUILD_PLATFORM: x64
   BUILD_CONFIGURATION: Release
+  BUILD_PLATFORMTOOLSET: v143
 
 jobs:
   build:
@@ -17,7 +18,7 @@ jobs:
       with: 
         msbuild-architecture: x64
     - name: Build
-      run: msbuild -maxCpuCount -property:Configuration=${{env.BUILD_CONFIGURATION}},Platform=${{env.BUILD_PLATFORM}},PlatformToolset= .
+      run: msbuild -maxCpuCount -property:Configuration=${{env.BUILD_CONFIGURATION}},Platform=${{env.BUILD_PLATFORM}},PlatformToolset=${{env.BUILD_PLATFORMTOOLSET}} .
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
