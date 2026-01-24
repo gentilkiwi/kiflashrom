@@ -67,9 +67,23 @@ int wmain(int argc, wchar_t* argv[])
 		status = SPI_InitChannel(handle, &config);
 		if (FT_SUCCESS(status))
 		{
-			if (GET_CLI_ARG_PRESENT(L"NRF24LU1P"))
+			if (GET_CLI_ARG_PRESENT(L"NRF24LU1P")) // does not answer to JEDEC id.
 			{
-				NRF24LU1P_Unbrick(handle, GET_CLI_ARG_PRESENT(L"f16"), GET_CLI_ARG_PRESENT(L"blind"));
+				BOOL bIsNRF24LU1P_F16 = GET_CLI_ARG_PRESENT(L"f16"), bIsBlind = GET_CLI_ARG_PRESENT(L"blind");
+
+				if (GET_CLI_ARG_PRESENT(L"unbrick"))
+				{
+					NRF24LU1P_Unbrick(handle, bIsNRF24LU1P_F16, bIsBlind);
+				}
+
+				if (!bIsBlind)
+				{
+					if (Size == 0)
+					{
+						Size = bIsNRF24LU1P_F16 ? NRF24LU1P_FLASH_SIZE_F16 : NRF24LU1P_FLASH_SIZE_F32;
+					}
+					GenericComparedRead(handle, GENERIC_OPTION_ADDR2B, Size, filename);
+				}
 			}
 			else
 			{
