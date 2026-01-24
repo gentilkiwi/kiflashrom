@@ -51,8 +51,10 @@ void kull_m_cli_DisplayError(PCSTR SourceFunction, PCWSTR SourceError, DWORD dwE
 BOOL kull_m_crypto_hash_sha256(LPCVOID pcvData, DWORD cbData, BYTE Hash[32]);
 
 #define kull_m_file_isFileExist(lpFileName)	(GetFileAttributes(lpFileName) != INVALID_FILE_ATTRIBUTES)
+#define kull_m_file_readData(szFileName, ppbData, pcbData)	kull_m_file_readGeneric(szFileName, ppbData, pcbData, 0)
 #define kull_m_file_writeData(szFileName, pbData, cbData)	kull_m_file_writeGeneric(szFileName, pbData, cbData, 0)
 
+BOOL kull_m_file_readGeneric(PCWSTR szFileName, PBYTE* ppbData, DWORD* pcbData, DWORD dwFlags);
 BOOL kull_m_file_writeGeneric(PCWSTR szFileName, LPCVOID pbData, DWORD cbData, DWORD dwFlags);
 
 FT_STATUS FT_K_DescribeChannel(DWORD index);

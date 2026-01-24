@@ -224,6 +224,53 @@ void kull_m_cli_DisplayError(PCSTR SourceFunction, PCWSTR SourceError, DWORD dwE
 	}
 }
 
+BOOL kull_m_file_readGeneric(PCWSTR szFileName, PBYTE* ppbData, DWORD* pcbData, DWORD dwFlags)
+{
+	BOOL status = FALSE;
+	DWORD dwBytesReaded;
+	LARGE_INTEGER filesize;
+	HANDLE hFile = NULL;
+
+	hFile = CreateFile(szFileName, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, dwFlags, NULL);
+	if (hFile != INVALID_HANDLE_VALUE)
+	{
+		if (GetFileSizeEx(hFile, &filesize) && !filesize.HighPart)
+		{
+			if (!filesize.HighPart)
+			{
+				*pcbData = filesize.LowPart;
+				*ppbData = (PBYTE)LocalAlloc(LPTR, *pcbData);
+				if (*ppbData)
+				{
+					if (ReadFile(hFile, *ppbData, *pcbData, &dwBytesReaded, NULL))
+					{
+						if (*pcbData == dwBytesReaded)
+						{
+							status = TRUE;
+						}
+						else PRINT_ERROR(L"Read %u, needed %u\n", dwBytesReaded, *pcbData);
+					}
+					else PRINT_ERROR_AUTO(L"ReadFile");
+
+					if (!status)
+					{
+						LocalFree(*ppbData);
+						*ppbData = NULL;
+						*pcbData = 0;
+					}
+				}
+			}
+			else PRINT_ERROR(L"Too big!\n");
+		}
+		else PRINT_ERROR_AUTO(L"GetFileSizeEx");
+
+		CloseHandle(hFile);
+	}
+	else PRINT_ERROR_AUTO(L"CreateFile");
+
+	return status;
+}
+
 BOOL kull_m_file_writeGeneric(PCWSTR szFileName, LPCVOID pbData, DWORD cbData, DWORD dwFlags)
 {
 	BOOL status = FALSE;

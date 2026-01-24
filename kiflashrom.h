@@ -16,6 +16,7 @@
 #include "chips/w25.h"
 #include "chips/m95.h"
 #include "chips/zd25ld.h"
+#include "chips/nrf24l.h"
 
 #define SPI_CONFIG_DEFAULT_FREQUENCY	5000000
 #define COMPARED_READ_ITERATIONS		5

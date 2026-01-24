@@ -34,6 +34,9 @@
     <ClCompile Include="chips\zd25ld.c">
       <Filter>chips</Filter>
     </ClCompile>
+    <ClCompile Include="chips\nrf24l.c">
+      <Filter>chips</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ftdi\mpsse_spi_mini\ftdi_common.h">
@@ -67,6 +70,9 @@
       <Filter>chips</Filter>
     </ClInclude>
     <ClInclude Include="chips\zd25ld.h">
+      <Filter>chips</Filter>
+    </ClInclude>
+    <ClInclude Include="chips\nrf24l.h">
       <Filter>chips</Filter>
     </ClInclude>
   </ItemGroup>

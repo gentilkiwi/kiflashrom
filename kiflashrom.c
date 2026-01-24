@@ -67,53 +67,60 @@ int wmain(int argc, wchar_t* argv[])
 		status = SPI_InitChannel(handle, &config);
 		if (FT_SUCCESS(status))
 		{
-			status = Generic_Read_ID(handle, &UID);
-			if (FT_SUCCESS(status))
+			if (GET_CLI_ARG_PRESENT(L"NRF24LU1P"))
 			{
-				kprintf(L"\nJEDEC JEP106 Read UID (internal is 0x%08x)\n"
-					L"\xc3 Bank# %hhu, Manufacturer# %hhu (hex/p: 0x%02X), Name: %S\n"
-					L"\xc3 DeviceID : 0x%04hX\n"
-					L"\xc3 !! double check: some manufacturers are not respecting their banks !!\n",
-					UID,
-					CHIP_UID_TO_BANK(UID), CHIP_UID_TO_MANUFACTURER(UID), CHIP_UID_TO_MANUFACTURER(UID) | (!parity8(CHIP_UID_TO_MANUFACTURER(UID)) << 7), CHIP_UID_TO_MANUFACTURER_NAME(UID),
-					CHIP_UID_TO_DEVICEID(UID)
-				);
-
-				kprintf(L"\xc0 Chip name: ");
-				switch (UID)
-				{
-				case UID_FM25V02:
-					kprintf(L"FM25V02\n");
-					FM25V0x(handle, &OptAddrSize, &Size);
-					break;
-				case UID_AT45DB081:
-					kprintf(L"AT45DB081 family\n");
-					AT45DBx(handle, &OptAddrSize, &Size);
-					break;
-				case UID_W25X20CL_CV:
-				case UID_W25Q16_DV_JL_JVxxQ:
-				case UID_W25Q32_RV_FVxxG_JVxxQ:
-					W25X(handle, UID, &OptAddrSize, &Size);
-					break;
-				case UID_M95P32:
-					kprintf(L"M95P32\n");
-					M95(handle, &OptAddrSize, &Size);
-					break;
-				case UID_ZD25LD40:
-					kprintf(L"ZD25LD40\n");
-					ZD25LD(handle, &OptAddrSize, &Size);
-					break;
-
-				default:
-					kprintf(L"?\n");
-				}
-
-				if (OptAddrSize && Size)
-				{
-					GenericComparedRead(handle, OptAddrSize, Size, filename);
-				}
+				NRF24LU1P_Unbrick(handle, GET_CLI_ARG_PRESENT(L"f16"), GET_CLI_ARG_PRESENT(L"blind"));
 			}
-			else PRINT_FT_ERROR(L"Read_ID", status);
+			else
+			{
+				status = Generic_Read_ID(handle, &UID);
+				if (FT_SUCCESS(status))
+				{
+					kprintf(L"\nJEDEC JEP106 Read UID (internal is 0x%08x)\n"
+						L"\xc3 Bank# %hhu, Manufacturer# %hhu (hex/p: 0x%02X), Name: %S\n"
+						L"\xc3 DeviceID : 0x%04hX\n"
+						L"\xc3 !! double check: some manufacturers are not respecting their banks !!\n",
+						UID,
+						CHIP_UID_TO_BANK(UID), CHIP_UID_TO_MANUFACTURER(UID), CHIP_UID_TO_MANUFACTURER(UID) | (!parity8(CHIP_UID_TO_MANUFACTURER(UID)) << 7), CHIP_UID_TO_MANUFACTURER_NAME(UID),
+						CHIP_UID_TO_DEVICEID(UID)
+					);
+
+					kprintf(L"\xc0 Chip name: ");
+					switch (UID)
+					{
+					case UID_FM25V02:
+						kprintf(L"FM25V02\n");
+						FM25V0x(handle, &OptAddrSize, &Size);
+						break;
+					case UID_AT45DB081:
+						kprintf(L"AT45DB081 family\n");
+						AT45DBx(handle, &OptAddrSize, &Size);
+						break;
+					case UID_W25X20CL_CV:
+					case UID_W25Q16_DV_JL_JVxxQ:
+					case UID_W25Q32_RV_FVxxG_JVxxQ:
+						W25X(handle, UID, &OptAddrSize, &Size);
+						break;
+					case UID_M95P32:
+						kprintf(L"M95P32\n");
+						M95(handle, &OptAddrSize, &Size);
+						break;
+					case UID_ZD25LD40:
+						kprintf(L"ZD25LD40\n");
+						ZD25LD(handle, &OptAddrSize, &Size);
+						break;
+
+					default:
+						kprintf(L"?\n");
+					}
+
+					if (OptAddrSize && Size)
+					{
+						GenericComparedRead(handle, OptAddrSize, Size, filename);
+					}
+				}
+				else PRINT_FT_ERROR(L"Read_ID", status);
+			}
 		}
 		else PRINT_FT_ERROR(L"SPI_InitChannel", status);
 
