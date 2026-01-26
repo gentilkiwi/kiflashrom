@@ -20,5 +20,5 @@
 
 #define UID_M95P32		MAKE_CHIP_UID(M95_JEDEC_BANK, M95_JEDEC_MANUFACTURER, 0x00, 0x16)
 
-FT_STATUS M95_PageErase(FT_HANDLE handle, DWORD address);
-FT_STATUS M95_ReadIdentification(FT_HANDLE handle, DWORD Address, BYTE* Identification, DWORD cbIdentification);
+FT_STATUS M95_PageErase(PKFTDI_MPSSE_SPI_HANDLE pKFTDI, DWORD address);
+FT_STATUS M95_ReadIdentification(PKFTDI_MPSSE_SPI_HANDLE pKFTDI, DWORD Address, BYTE* Identification, DWORD cbIdentification);

@@ -6,8 +6,7 @@
 #pragma once
 #include <windows.h>
 #include <stdio.h>
-#include "ftd2xx.h"
-#include "libmpsse_spi.h"
+#include "libkftdi_mpsse.h"
 
 typedef struct _DUAL_STRING_FT_STATUS {
 	PCSTR name;
@@ -57,5 +56,5 @@ BOOL kull_m_crypto_hash_sha256(LPCVOID pcvData, DWORD cbData, BYTE Hash[32]);
 BOOL kull_m_file_readGeneric(PCWSTR szFileName, PBYTE* ppbData, DWORD* pcbData, DWORD dwFlags);
 BOOL kull_m_file_writeGeneric(PCWSTR szFileName, LPCVOID pbData, DWORD cbData, DWORD dwFlags);
 
-FT_STATUS FT_K_DescribeChannel(DWORD index);
-FT_STATUS FT_K_SelectChannel(int argc, wchar_t* argv[], FT_HANDLE* pHandle);
+void FT_K_DescribeChannel(DWORD dwIndex, FT_DEVICE_LIST_INFO_NODE* pNode);
+FT_STATUS FT_K_SelectChannel(int argc, wchar_t* argv[], PDWORD pdwIndex);

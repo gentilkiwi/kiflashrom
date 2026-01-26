@@ -304,92 +304,102 @@ const PCSTR FT_K_DEVICES_NAMES[] = {
 	"FT_DEVICE_4232HA",
 };
 
-FT_STATUS FT_K_DescribeChannel(DWORD index)
+void FT_K_DescribeChannel(DWORD dwIndex, FT_DEVICE_LIST_INFO_NODE *pNode)
 {
-	FT_STATUS status;
-	FT_DEVICE_LIST_INFO_NODE chanInfo;
-
-	status = SPI_GetChannelInfo(index, &chanInfo);
-	if (FT_SUCCESS(status))
+	kprintf(L"Device # %lu\n"
+		L"\xc3 LocId       : 0x%08lx\n"
+		L"\xc3 Flags       : 0x%08lx",
+		dwIndex, pNode->LocId, pNode->Flags
+	);
+	if (pNode->Flags & FT_FLAGS_OPENED)
 	{
-		kprintf(L"Device # %lu\n"
-			L"\xc3 LocId       : 0x%08lx\n"
-			L"\xc3 Flags       : 0x%08lx",
-			index, chanInfo.LocId, chanInfo.Flags
-		);
-		if (chanInfo.Flags & FT_FLAGS_OPENED)
-		{
-			kprintf(L" - OPENED");
-		}
-		if (chanInfo.Flags & FT_FLAGS_HISPEED)
-		{
-			kprintf(L" - HISPEED");
-		}
-		kprintf(L"\n"
-			L"\xc3 Type        : 0x%08lx - %S\n"
-			L"\xc3 ID          : 0x%08lx (VID 0x%04x - PID 0x%04x)\n"
-			L"\xc3 SerialNumber: %.16S\n"
-			L"\xc0 Description : %.64S\n\n",
-			chanInfo.Type, (chanInfo.Type <= ARRAYSIZE(FT_K_DEVICES_NAMES)) ? FT_K_DEVICES_NAMES[chanInfo.Type] : "?",
-			chanInfo.ID, (WORD)(chanInfo.ID >> 16), (WORD)chanInfo.ID,
-			chanInfo.SerialNumber,
-			chanInfo.Description
-		);
+		kprintf(L" - OPENED");
 	}
-	else PRINT_FT_ERROR(L"SPI_GetChannelInfo", status);
-
-	return status;
+	if (pNode->Flags & FT_FLAGS_HISPEED)
+	{
+		kprintf(L" - HISPEED");
+	}
+	kprintf(L"\n"
+		L"\xc3 Type        : 0x%08lx - %S\n"
+		L"\xc3 ID          : 0x%08lx (VID 0x%04x - PID 0x%04x)\n"
+		L"\xc3 SerialNumber: %.16S\n"
+		L"\xc0 Description : %.64S\n\n",
+		pNode->Type, (pNode->Type < ARRAYSIZE(FT_K_DEVICES_NAMES)) ? FT_K_DEVICES_NAMES[pNode->Type] : "?",
+		pNode->ID, (WORD)(pNode->ID >> 16), (WORD)pNode->ID,
+		pNode->SerialNumber,
+		pNode->Description
+	);
 }
 
-FT_STATUS FT_K_SelectChannel(int argc, wchar_t* argv[], FT_HANDLE* pHandle)
+FT_STATUS FT_K_SelectChannel(int argc, wchar_t* argv[], PDWORD pdwIndex)
 {
 	FT_STATUS status;
 	DWORD numChannels, i = 0;
+	FT_DEVICE_LIST_INFO_NODE* pNodes;
 	LPCWSTR device;
 
-	if (GET_CLI_ARG(L"device", &device))
+	status = FT_CreateDeviceInfoList(&numChannels);
+	if (FT_SUCCESS(status))
 	{
-		i = wcstoul(device, NULL, 0);
-		kprintf(L"> Using explicit device number: %s (# %lu)\n", device, i);
-		status = FT_K_DescribeChannel(i);
-	}
-	else
-	{
-		status = SPI_GetNumChannels(&numChannels);
-		if (FT_SUCCESS(status))
+		if (numChannels)
 		{
-			if (!numChannels)
+			pNodes = (FT_DEVICE_LIST_INFO_NODE*)LocalAlloc(LPTR, sizeof(FT_DEVICE_LIST_INFO_NODE) * numChannels);
+			if (pNodes)
 			{
-				PRINT_ERROR(L"No channel available (?)\n");
-				status = FT_DEVICE_NOT_FOUND;
-			}
-			else if (numChannels == 1)
-			{
-				kprintf(L"> Using implicit device number # 0\n");
-				i = 0;
-				status = FT_K_DescribeChannel(i);
+				status = FT_GetDeviceInfoList(pNodes, &numChannels);
+				if (FT_SUCCESS(status))
+				{
+					if (numChannels == 1)
+					{
+						kprintf(L"> Using implicit device number # 0\n");
+						FT_K_DescribeChannel(0, pNodes + 0);
+					}
+					else if (GET_CLI_ARG(L"device", &device))
+					{
+						i = wcstoul(device, NULL, 0);
+						kprintf(L"> Using explicit device number: %s (# %lu)\n", device, i);
+						if (i < numChannels)
+						{
+							FT_K_DescribeChannel(i, pNodes + i);
+						}
+						else
+						{
+							PRINT_ERROR(L"Index (%lu) is >= to numChannels (%lu)\n", i, numChannels);
+							status = FT_INVALID_PARAMETER;
+						}
+					}
+					else
+					{
+						kprintf(L"> Multiple devices are available, consider using /device:_number_ from this list:\n\n");
+						for (i = 0; i < numChannels; i++)
+						{
+							FT_K_DescribeChannel(i, pNodes + i);
+						}
+						i = 0;
+						kprintf(L"> Device # 0 will be used by default\n");
+					}
+				}
+				else PRINT_FT_ERROR(L"FT_GetDeviceInfoList", status);
+
+				LocalFree(pNodes);
 			}
 			else
 			{
-				kprintf(L"> Multiple devices are available, consider using /device:_number_ from this list:\n\n");
-				for (i = 0; (i < numChannels) && FT_SUCCESS(status); i++)
-				{
-					status = FT_K_DescribeChannel(i);
-				}
-				i = 0;
-				kprintf(L"> Device # 0 will be used by default\n");
+				PRINT_ERROR_AUTO(L"LocalAlloc");
+				status = FT_INSUFFICIENT_RESOURCES;
 			}
 		}
-		else PRINT_FT_ERROR(L"SPI_GetNumChannels", status);
+		else
+		{
+			PRINT_ERROR(L"No channel available (?)\n");
+			status = FT_DEVICE_NOT_FOUND;
+		}
 	}
+	else PRINT_FT_ERROR(L"FT_CreateDeviceInfoList", status);
 
 	if (FT_SUCCESS(status))
 	{
-		status = SPI_OpenChannel(i, pHandle);
-		if (!FT_SUCCESS(status))
-		{
-			PRINT_FT_ERROR(L"SPI_OpenChannel", status);
-		}
+		*pdwIndex = i;
 	}
 
 	return status;

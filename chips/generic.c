@@ -5,11 +5,11 @@
 */
 #include "generic.h"
 
-FT_STATUS Generic_SPI(FT_HANDLE handle, BYTE Command, BYTE Option, DWORD Address, BYTE* Data, DWORD cbData)
+FT_STATUS Generic_SPI(PKFTDI_MPSSE_SPI_HANDLE pKFTDI, BYTE Command, BYTE Option, DWORD Address, BYTE* Data, DWORD cbData)
 {
 	FT_STATUS status;
 	BYTE Buffer[1 + GENERIC_OPTION_ADDR_MAX + GENERIC_OPTION_DUMMY_MAX];
-	DWORD idx = 0, szTransfered, cbDummy;
+	WORD idx = 0, cbDummy;
 
 	Buffer[idx++] = Command;
 
@@ -31,22 +31,27 @@ FT_STATUS Generic_SPI(FT_HANDLE handle, BYTE Command, BYTE Option, DWORD Address
 		idx += cbDummy;
 	}
 
-	status = SPI_Write(handle, Buffer, idx, &szTransfered, SPI_TRANSFER_OPTIONS_CHIPSELECT_ENABLE | SPI_TRANSFER_OPTIONS_SIZE_IN_BYTES);
+	KFTDI_MPSSE_SPI_GPIO_AD_SetPinDirValue(pKFTDI, PIN_SPI_CS, PIN_OUTPUT, PIN_LOW);
+	status = KFTDI_MPSSE_SPI_DataShift(pKFTDI, Buffer, NULL, idx);
+	//status = SPI_Write(pKFTDI, Buffer, idx, &szTransfered, SPI_TRANSFER_OPTIONS_CHIPSELECT_ENABLE | SPI_TRANSFER_OPTIONS_SIZE_IN_BYTES);
 	if (FT_SUCCESS(status) && Data && cbData)
 	{
 		if (Option & GENERIC_OPTION_OP_READ)
 		{
-			status = SPI_Read(handle, Data, cbData, &szTransfered, SPI_TRANSFER_OPTIONS_SIZE_IN_BYTES);
+			status = KFTDI_MPSSE_SPI_DataShiftEx(pKFTDI, NULL, Data, cbData);
+			//status = SPI_Read(pKFTDI, Data, cbData, &szTransfered, SPI_TRANSFER_OPTIONS_SIZE_IN_BYTES);
 		}
 		else
 		{
-			status = SPI_Write(handle, Data, cbData, &szTransfered, SPI_TRANSFER_OPTIONS_SIZE_IN_BYTES);
+			status = KFTDI_MPSSE_SPI_DataShiftEx(pKFTDI, Data, NULL, cbData);
+			//status = SPI_Write(pKFTDI, Data, cbData, &szTransfered, SPI_TRANSFER_OPTIONS_SIZE_IN_BYTES);
 		}
 	}
 
 	if (!(Option & GENERIC_OPTION_KEEP_CS))
 	{
-		/*status = */SPI_ToggleCS(handle, FALSE);
+		KFTDI_MPSSE_SPI_GPIO_AD_SetPinDirValue(pKFTDI, PIN_SPI_CS, PIN_OUTPUT, PIN_HIGH);
+		///*status = */SPI_ToggleCS(pKFTDI, FALSE);
 	}
 
 	return status;
@@ -74,25 +79,28 @@ const char* CHIP_UID_TO_MANUFACTURER_NAME(const DWORD UID)
 	return ret;
 }
 
-FT_STATUS Generic_Read_ID(FT_HANDLE handle, DWORD* pUID)
+FT_STATUS Generic_Read_ID(PKFTDI_MPSSE_SPI_HANDLE pKFTDI, DWORD* pUID)
 {
 	FT_STATUS status;
-	DWORD sizeTransferred;
+	//DWORD sizeTransferred;
 	BYTE in_out[2] = { JEDEC_ReadId, };
 	BYTE bank, manufacturer;
 
-	if (handle && pUID)
+	if (pKFTDI && pUID)
 	{
-		status = SPI_ReadWrite(handle, in_out, in_out, 2, &sizeTransferred, SPI_TRANSFER_OPTIONS_CHIPSELECT_ENABLE | SPI_TRANSFER_OPTIONS_SIZE_IN_BYTES);
+		KFTDI_MPSSE_SPI_GPIO_AD_SetPinDirValue(pKFTDI, PIN_SPI_CS, PIN_OUTPUT, PIN_LOW);
+		status = KFTDI_MPSSE_SPI_DataShift(pKFTDI, in_out, in_out, 2);
+		//status = SPI_ReadWrite(pKFTDI, in_out, in_out, 2, &sizeTransferred, SPI_TRANSFER_OPTIONS_CHIPSELECT_ENABLE | SPI_TRANSFER_OPTIONS_SIZE_IN_BYTES);
 		if (FT_SUCCESS(status))
 		{
 			for (
 				bank = 1, manufacturer = in_out[1];
-				(manufacturer == JEDEC_Continuation_Code) && (bank <= JEDEC_ReadId_MAX_Banks) && (status == FT_OK);
+				(manufacturer == JEDEC_Continuation_Code) && (bank <= JEDEC_ReadId_MAX_Banks) && FT_SUCCESS(status);
 				bank++, manufacturer = in_out[0]
 				)
 			{
-				status = SPI_Read(handle, in_out, 1, &sizeTransferred, SPI_TRANSFER_OPTIONS_SIZE_IN_BYTES);
+				status = KFTDI_MPSSE_SPI_DataShift(pKFTDI, NULL, in_out, 1);
+				//status = SPI_Read(pKFTDI, in_out, 1, &sizeTransferred, SPI_TRANSFER_OPTIONS_SIZE_IN_BYTES);
 			}
 
 			if (FT_SUCCESS(status))
@@ -102,7 +110,8 @@ FT_STATUS Generic_Read_ID(FT_HANDLE handle, DWORD* pUID)
 					if (parity8(manufacturer & JEDEC_Continuation_Code) != (manufacturer >> 7))
 					{
 						manufacturer &= JEDEC_Continuation_Code;
-						status = SPI_Read(handle, in_out, 2, &sizeTransferred, SPI_TRANSFER_OPTIONS_SIZE_IN_BYTES);
+						status = KFTDI_MPSSE_SPI_DataShift(pKFTDI, NULL, in_out, 2);
+						//status = SPI_Read(pKFTDI, in_out, 2, &sizeTransferred, SPI_TRANSFER_OPTIONS_SIZE_IN_BYTES);
 						if ((status == FT_OK) && pUID)
 						{
 							*pUID = MAKE_CHIP_UID(bank, manufacturer, in_out[0], in_out[1]);
@@ -119,7 +128,8 @@ FT_STATUS Generic_Read_ID(FT_HANDLE handle, DWORD* pUID)
 				}
 			}
 		}
-		/*status = */SPI_ToggleCS(handle, FALSE);
+		KFTDI_MPSSE_SPI_GPIO_AD_SetPinDirValue(pKFTDI, PIN_SPI_CS, PIN_OUTPUT, PIN_HIGH);
+		///*status = */SPI_ToggleCS(pKFTDI, FALSE);
 	}
 	else
 	{
@@ -129,11 +139,11 @@ FT_STATUS Generic_Read_ID(FT_HANDLE handle, DWORD* pUID)
 	return status;
 }
 
-FT_STATUS Generic_Read_SFDP(FT_HANDLE handle, BYTE SFDP[JEDEC_SFDP_Size])
+FT_STATUS Generic_Read_SFDP(PKFTDI_MPSSE_SPI_HANDLE pKFTDI, BYTE SFDP[JEDEC_SFDP_Size])
 {
 	FT_STATUS status;
 
-	status = Generic_SPI(handle, JEDEC_ReadSFDP, GENERIC_OPTION_OP_READ | GENERIC_OPTION_ADDR3B | GENERIC_OPTION_DUMMY_FROM(1), 0x000000, SFDP, JEDEC_SFDP_Size);
+	status = Generic_SPI(pKFTDI, JEDEC_ReadSFDP, GENERIC_OPTION_OP_READ | GENERIC_OPTION_ADDR3B | GENERIC_OPTION_DUMMY_FROM(1), 0x000000, SFDP, JEDEC_SFDP_Size);
 	if (FT_SUCCESS(status))
 	{
 		if (*(DWORD*)SFDP != 'PDFS')
@@ -145,14 +155,14 @@ FT_STATUS Generic_Read_SFDP(FT_HANDLE handle, BYTE SFDP[JEDEC_SFDP_Size])
 	return status;
 }
 
-FT_STATUS Generic_Status_Wait_Ready(FT_HANDLE handle, BYTE* pStatus)
+FT_STATUS Generic_Status_Wait_Ready(PKFTDI_MPSSE_SPI_HANDLE pKFTDI, BYTE* pStatus)
 {
 	FT_STATUS status;
 	BYTE Status;
 
 	do
 	{
-		status = Generic_Read_Status(handle, &Status);
+		status = Generic_Read_Status(pKFTDI, &Status);
 		if (!FT_SUCCESS(status))
 		{
 			return status;
@@ -168,18 +178,18 @@ FT_STATUS Generic_Status_Wait_Ready(FT_HANDLE handle, BYTE* pStatus)
 	return status;
 }
 
-FT_STATUS Generic_Write_Enable_Confirmed(FT_HANDLE handle)
+FT_STATUS Generic_Write_Enable_Confirmed(PKFTDI_MPSSE_SPI_HANDLE pKFTDI)
 {
 	FT_STATUS status;
 	BYTE Status;
 
-	status = Generic_Write_Enable(handle);
+	status = Generic_Write_Enable(pKFTDI);
 	if (!FT_SUCCESS(status))
 	{
 		return status;
 	}
 
-	status = Generic_Read_Status(handle, &Status);
+	status = Generic_Read_Status(pKFTDI, &Status);
 	if (!FT_SUCCESS(status))
 	{
 		return status;
@@ -193,18 +203,18 @@ FT_STATUS Generic_Write_Enable_Confirmed(FT_HANDLE handle)
 	return status;
 }
 
-FT_STATUS Generic_Write_Disable_Confirmed(FT_HANDLE handle)
+FT_STATUS Generic_Write_Disable_Confirmed(PKFTDI_MPSSE_SPI_HANDLE pKFTDI)
 {
 	FT_STATUS status;
 	BYTE Status;
 
-	status = Generic_Write_Disable(handle);
+	status = Generic_Write_Disable(pKFTDI);
 	if (!FT_SUCCESS(status))
 	{
 		return status;
 	}
 
-	status = Generic_Read_Status(handle, &Status);
+	status = Generic_Read_Status(pKFTDI, &Status);
 	if (!FT_SUCCESS(status))
 	{
 		return status;
@@ -218,12 +228,12 @@ FT_STATUS Generic_Write_Disable_Confirmed(FT_HANDLE handle)
 	return status;
 }
 
-FT_STATUS Generic_Status_Wait_Ready_and_Write_Enable(FT_HANDLE handle)
+FT_STATUS Generic_Status_Wait_Ready_and_Write_Enable(PKFTDI_MPSSE_SPI_HANDLE pKFTDI)
 {
 	FT_STATUS status;
 	BYTE Status;
 
-	status = Generic_Status_Wait_Ready(handle, &Status);
+	status = Generic_Status_Wait_Ready(pKFTDI, &Status);
 	if (!FT_SUCCESS(status))
 	{
 		return status;
@@ -231,18 +241,18 @@ FT_STATUS Generic_Status_Wait_Ready_and_Write_Enable(FT_HANDLE handle)
 
 	if (!(Status & GENERIC_STATUS_WEL))
 	{
-		status = Generic_Write_Enable_Confirmed(handle);
+		status = Generic_Write_Enable_Confirmed(pKFTDI);
 	}
 
 	return status;
 }
 
-FT_STATUS Generic_Status_Wait_Ready_and_Write_Disable(FT_HANDLE handle)
+FT_STATUS Generic_Status_Wait_Ready_and_Write_Disable(PKFTDI_MPSSE_SPI_HANDLE pKFTDI)
 {
 	FT_STATUS status;
 	BYTE Status;
 
-	status = Generic_Status_Wait_Ready(handle, &Status);
+	status = Generic_Status_Wait_Ready(pKFTDI, &Status);
 	if (!FT_SUCCESS(status))
 	{
 		return status;
@@ -250,50 +260,50 @@ FT_STATUS Generic_Status_Wait_Ready_and_Write_Disable(FT_HANDLE handle)
 
 	if (Status & GENERIC_STATUS_WEL)
 	{
-		status = Generic_Write_Disable_Confirmed(handle);
+		status = Generic_Write_Disable_Confirmed(pKFTDI);
 	}
 
 	return status;
 }
 
-FT_STATUS Generic_Write_Enable_Write_Data(FT_HANDLE handle, BYTE OptAddrSize, DWORD address, const void* buffer, DWORD size)
+FT_STATUS Generic_Write_Enable_Write_Data(PKFTDI_MPSSE_SPI_HANDLE pKFTDI, BYTE OptAddrSize, DWORD address, const void* buffer, DWORD size)
 {
 	FT_STATUS status;
 
-	status = Generic_Status_Wait_Ready_and_Write_Enable(handle);
+	status = Generic_Status_Wait_Ready_and_Write_Enable(pKFTDI);
 	if (!FT_SUCCESS(status))
 	{
 		return status;
 	}
 
-	status = Generic_Write_Data(handle, OptAddrSize, address, buffer, size);
+	status = Generic_Write_Data(pKFTDI, OptAddrSize, address, buffer, size);
 	if (!FT_SUCCESS(status))
 	{
 		return status;
 	}
 
-	status = Generic_Status_Wait_Ready_and_Write_Disable(handle);
+	status = Generic_Status_Wait_Ready_and_Write_Disable(pKFTDI);
 
 	return status;
 }
 
-FT_STATUS Generic_Write_Enable_Chip_Erase(FT_HANDLE handle)
+FT_STATUS Generic_Write_Enable_Chip_Erase(PKFTDI_MPSSE_SPI_HANDLE pKFTDI)
 {
 	FT_STATUS status;
 
-	status = Generic_Status_Wait_Ready_and_Write_Enable(handle);
+	status = Generic_Status_Wait_Ready_and_Write_Enable(pKFTDI);
 	if (!FT_SUCCESS(status))
 	{
 		return status;
 	}
 
-	status = Generic_Chip_Erase(handle);
+	status = Generic_Chip_Erase(pKFTDI);
 	if (!FT_SUCCESS(status))
 	{
 		return status;
 	}
 
-	status = Generic_Status_Wait_Ready_and_Write_Disable(handle);
+	status = Generic_Status_Wait_Ready_and_Write_Disable(pKFTDI);
 
 	return status;
 }

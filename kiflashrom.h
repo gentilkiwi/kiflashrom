@@ -5,8 +5,7 @@
 */
 #pragma once
 #include <stdio.h>
-#include "ftd2xx.h"
-#include "libmpsse_spi.h"
+#include "libkftdi_mpsse.h"
 #include "jedec_manufacturers.h"
 #include "utils.h"
 
@@ -19,11 +18,11 @@
 #include "chips/nrf24l.h"
 
 #define SPI_CONFIG_DEFAULT_FREQUENCY	5000000
-#define COMPARED_READ_ITERATIONS		5
+#define COMPARED_READ_ITERATIONS		1//5
 
-void GenericComparedRead(FT_HANDLE handle, BYTE OptAddrSize, DWORD Size, PCWSTR filename);
-void FM25V0x(FT_HANDLE handle, BYTE* pOptAddrSize, DWORD* pSize);
-void AT45DBx(FT_HANDLE handle, BYTE* pOptAddrSize, DWORD* pSize);
-void W25X(FT_HANDLE handle, DWORD UID, BYTE* pOptAddrSize, DWORD* pSize);
-void M95(FT_HANDLE handle, BYTE* pOptAddrSize, DWORD* pSize);
-void ZD25LD(FT_HANDLE handle, BYTE* pOptAddrSize, DWORD* pSize);
+void GenericComparedRead(PKFTDI_MPSSE_SPI_HANDLE pKFTDI, BYTE OptAddrSize, DWORD Size, PCWSTR filename);
+void FM25V0x(PKFTDI_MPSSE_SPI_HANDLE pKFTDI, BYTE* pOptAddrSize, DWORD* pSize);
+void AT45DBx(PKFTDI_MPSSE_SPI_HANDLE pKFTDI, BYTE* pOptAddrSize, DWORD* pSize);
+void W25X(PKFTDI_MPSSE_SPI_HANDLE pKFTDI, DWORD UID, BYTE* pOptAddrSize, DWORD* pSize);
+void M95(PKFTDI_MPSSE_SPI_HANDLE pKFTDI, BYTE* pOptAddrSize, DWORD* pSize);
+void ZD25LD(PKFTDI_MPSSE_SPI_HANDLE pKFTDI, BYTE* pOptAddrSize, DWORD* pSize);

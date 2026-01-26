@@ -89,11 +89,11 @@ FT_STATUS Generic_Read_SFDP(FT_HANDLE handle, BYTE SFDP[JEDEC_SFDP_Size]);
 #define Generic_Read_Data(handle, option, address, buffer, size)	Generic_SPI(handle, GENERIC_OPCODE_READ_DATA, GENERIC_OPTION_OP_READ | option, address, (BYTE *) buffer, size)
 #define Generic_Write_Data(handle, option, address, buffer, size)	Generic_SPI(handle, GENERIC_OPCODE_WRITE_DATA, GENERIC_OPTION_OP_WRITE | option, address, (BYTE *) buffer, size)
 
-FT_STATUS Generic_Status_Wait_Ready(FT_HANDLE handle, BYTE* pStatus);
-FT_STATUS Generic_Write_Enable_Confirmed(FT_HANDLE handle);
-FT_STATUS Generic_Write_Disable_Confirmed(FT_HANDLE handle);
-FT_STATUS Generic_Status_Wait_Ready_and_Write_Enable(FT_HANDLE handle);
-FT_STATUS Generic_Status_Wait_Ready_and_Write_Disable(FT_HANDLE handle);
+FT_STATUS Generic_Status_Wait_Ready(PKFTDI_MPSSE_SPI_HANDLE pKFTDI, BYTE* pStatus);
+FT_STATUS Generic_Write_Enable_Confirmed(PKFTDI_MPSSE_SPI_HANDLE pKFTDI);
+FT_STATUS Generic_Write_Disable_Confirmed(PKFTDI_MPSSE_SPI_HANDLE pKFTDI);
+FT_STATUS Generic_Status_Wait_Ready_and_Write_Enable(PKFTDI_MPSSE_SPI_HANDLE pKFTDI);
+FT_STATUS Generic_Status_Wait_Ready_and_Write_Disable(PKFTDI_MPSSE_SPI_HANDLE pKFTDI);
 
-FT_STATUS Generic_Write_Enable_Write_Data(FT_HANDLE handle, BYTE OptAddrSize, DWORD address, const void* buffer, DWORD size);
-FT_STATUS Generic_Write_Enable_Chip_Erase(FT_HANDLE handle);
+FT_STATUS Generic_Write_Enable_Write_Data(PKFTDI_MPSSE_SPI_HANDLE pKFTDI, BYTE OptAddrSize, DWORD address, const void* buffer, DWORD size);
+FT_STATUS Generic_Write_Enable_Chip_Erase(PKFTDI_MPSSE_SPI_HANDLE pKFTDI);
