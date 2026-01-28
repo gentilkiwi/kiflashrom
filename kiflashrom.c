@@ -29,7 +29,7 @@ int wmain(int argc, wchar_t* argv[])
 		L" '## v  \xc4\xb4   f \xc3\xc4   ***/\n"
 		L"  '#### \xc4\xb4     \xc3\xc4\n"
 		L"         \xc0\xc4\xc4\xc4\xc4\xc4\xd9\n\n",
-		(WORD)(libftd2xx >> 16), (BYTE)(libftd2xx >> 8), (BYTE)(libftd2xx));
+		HIWORD(libftd2xx), HIBYTE(libftd2xx), LOBYTE(libftd2xx));
 
 	/* frequency 
 	 * ---------
@@ -40,6 +40,11 @@ int wmain(int argc, wchar_t* argv[])
 	{
 		dwFrequency = wcstoul(frequency, NULL, 0);
 		kprintf(L"> Using frequency: %s (%lu Hz)\n", frequency, dwFrequency);
+
+		if ((dwFrequency < 100000) || (dwFrequency > KFTDI_MPSSE_MAX_FREQUENCY_WITHOUT_DIV))
+		{
+			kprintf(L"!! WARNING !! Frequency < 100kHz isn\'t reliable, and must be <= 30 MHz\n"); // ~54kHz, even with the real MPSSE
+		}
 	}
 
 	if (GET_CLI_ARG(L"file", &filename))
@@ -62,12 +67,21 @@ int wmain(int argc, wchar_t* argv[])
 	if (FT_SUCCESS(status))
 	{
 		kprintf(L"SPI:\n"L"\xc0 SPI ClockRate: %lu Hz\n", dwFrequency);
+
 		status = KFTDI_MPSSE_SPI_Open(dwIndex, KFTDI_MPSSE_SPI_MODE_0 | KFTDI_MPSSE_SPI_MODE_MSB | KFTDI_MPSSE_SPI_MODE_BYTE, dwFrequency, &hKFTDI);
 		if (FT_SUCCESS(status))
 		{
 			if (GET_CLI_ARG_PRESENT(L"NRF24LU1P")) // does not answer to JEDEC id.
 			{
-				BOOL bIsNRF24LU1P_F16 = GET_CLI_ARG_PRESENT(L"f16"), bIsBlind = GET_CLI_ARG_PRESENT(L"blind");
+				BOOL bIsNRF24LU1P_F16 = GET_CLI_ARG_PRESENT(L"f16"), bIsBlind = GET_CLI_ARG_PRESENT(L"blind"), bIsProg = GET_CLI_ARG_PRESENT(L"prog");
+
+				kprintf(L"\n** NRF24LU1P specifics **\n");
+				if (bIsProg)
+				{
+					kprintf(L"| Using PIN #%u for PROG signal\n", NRF24LU1P_PIN_PROG);
+					KFTDI_MPSSE_SPI_GPIO_AD_SetPinDirValue(&hKFTDI, NRF24LU1P_PIN_PROG, PIN_OUTPUT, PIN_HIGH);
+					Sleep(10);
+				}
 
 				if (GET_CLI_ARG_PRESENT(L"unbrick"))
 				{
@@ -81,6 +95,11 @@ int wmain(int argc, wchar_t* argv[])
 						Size = bIsNRF24LU1P_F16 ? NRF24LU1P_FLASH_SIZE_F16 : NRF24LU1P_FLASH_SIZE_F32;
 					}
 					GenericComparedRead(&hKFTDI, GENERIC_OPTION_ADDR2B, Size, filename);
+				}
+
+				if (bIsProg)
+				{
+					KFTDI_MPSSE_SPI_GPIO_AD_SetPinDirValue(&hKFTDI, NRF24LU1P_PIN_PROG, PIN_OUTPUT, PIN_LOW);
 				}
 			}
 			else
@@ -146,30 +165,32 @@ void GenericComparedRead(PKFTDI_MPSSE_SPI_HANDLE pKFTDI, BYTE OptAddrSize, DWORD
 {
 	FT_STATUS status;
 	BYTE *buffer, i, isHashOK = 1, Hash[32], HashToComp[32];
+	FILETIME ft_start, ft_end;
 
 	kprintf(L"\nCompared read for %lu byte(s) - %hhu iteration(s)\n", Size, (BYTE) COMPARED_READ_ITERATIONS);
-
-	buffer = malloc(Size);
+	buffer = LocalAlloc(LPTR, Size);
 	if (buffer)
 	{
 		for (i = 0; (i < COMPARED_READ_ITERATIONS) && isHashOK; i++)
 		{
 			isHashOK = 0;
+			GetSystemTimeAsFileTime(&ft_start);
 			status = Generic_Read_Data(pKFTDI, OptAddrSize, 0, buffer, Size);
+			GetSystemTimeAsFileTime(&ft_end);
 			if (FT_SUCCESS(status))
 			{
-				kprintf(L"\xc3 Read: %lu byte(s) - SHA2-256(data)= ", Size);
+				kprintf(L"\xc3 Read: %lu byte(s) - %u ms - SHA2-256(data)= ", Size, (ft_end.dwLowDateTime - ft_start.dwLowDateTime) / 10000);
 				if (kull_m_crypto_hash_sha256(buffer, Size, Hash))
 				{
 					kprinthex(Hash, sizeof(Hash));
 					if (!i)
 					{
-						memcpy(HashToComp, Hash, sizeof(Hash));
+						RtlCopyMemory(HashToComp, Hash, sizeof(Hash));
 						isHashOK = 1;
 					}
 					else
 					{
-						isHashOK = !memcmp(HashToComp, Hash, sizeof(Hash));
+						isHashOK = RtlEqualMemory(HashToComp, Hash, sizeof(Hash));
 					}
 				}
 			}
@@ -194,9 +215,9 @@ void GenericComparedRead(PKFTDI_MPSSE_SPI_HANDLE pKFTDI, BYTE OptAddrSize, DWORD
 		}
 		else PRINT_ERROR("Data not reliable\n");
 
-		free(buffer);
+		LocalFree(buffer);
 	}
-	else PRINT_ERROR(L"malloc for %lu byte(s)\n", Size);
+	else PRINT_ERROR_AUTO(L"LocalAlloc");
 }
 
 void FM25V0x(PKFTDI_MPSSE_SPI_HANDLE pKFTDI, BYTE* pOptAddrSize, DWORD* pSize)

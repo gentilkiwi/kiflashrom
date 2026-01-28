@@ -10,6 +10,8 @@
 #pragma once
 #include "generic.h"
 
+#define NRF24LU1P_PIN_PROG	4
+
 #define NRF24LU1P_PAGE_SIZE	0x100
 
 #define NRF24LU1P_PAGES_COUNT_F16	0x40

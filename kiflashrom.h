@@ -18,7 +18,7 @@
 #include "chips/nrf24l.h"
 
 #define SPI_CONFIG_DEFAULT_FREQUENCY	5000000
-#define COMPARED_READ_ITERATIONS		1//5
+#define COMPARED_READ_ITERATIONS		5
 
 void GenericComparedRead(PKFTDI_MPSSE_SPI_HANDLE pKFTDI, BYTE OptAddrSize, DWORD Size, PCWSTR filename);
 void FM25V0x(PKFTDI_MPSSE_SPI_HANDLE pKFTDI, BYTE* pOptAddrSize, DWORD* pSize);

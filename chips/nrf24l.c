@@ -12,12 +12,7 @@ FT_STATUS  NRF24L_Status_Wait_Ready(PKFTDI_MPSSE_SPI_HANDLE pKFTDI, BYTE* pStatu
 
 	do
 	{
-		status = Generic_Read_Status(pKFTDI, &Status);
-		if (!FT_SUCCESS(status))
-		{
-			return status;
-		}
-
+		FT_FAST_FAIL(Generic_Read_Status(pKFTDI, &Status));
 	} while (Status & NRF24_STATUS_RDYN);
 
 	if (pStatus)
@@ -25,6 +20,7 @@ FT_STATUS  NRF24L_Status_Wait_Ready(PKFTDI_MPSSE_SPI_HANDLE pKFTDI, BYTE* pStatu
 		*pStatus = Status;
 	}
 
+FT_FAIL:
 	return status;
 }
 
@@ -33,23 +29,15 @@ FT_STATUS NRF24L_Write_Enable_Confirmed(PKFTDI_MPSSE_SPI_HANDLE pKFTDI)
 	FT_STATUS status;
 	BYTE Status;
 
-	status = Generic_Write_Enable(pKFTDI);
-	if (!FT_SUCCESS(status))
-	{
-		return status;
-	}
-
-	status = Generic_Read_Status(pKFTDI, &Status);
-	if (!FT_SUCCESS(status))
-	{
-		return status;
-	}
+	FT_FAST_FAIL(Generic_Write_Enable(pKFTDI));
+	FT_FAST_FAIL(Generic_Read_Status(pKFTDI, &Status));
 
 	if (!(Status & NRF24_STATUS_WEN))
 	{
 		status = FT_OTHER_ERROR;
 	}
 
+FT_FAIL:
 	return status;
 }
 
@@ -105,16 +93,21 @@ const BYTE NRF24LU1P_USB_BOOTLOADER_2[] = { // NRF24LU1P_BOOTLOADER_START_F* + N
 	0x00, 0x4c, 0x00, 0x44, 0x00, 0x52, 0x00, 0x04, 0x03, 0x09, 0x04
 };
 
-void NRF24LU1P_Unbrick_WaitReady(PKFTDI_MPSSE_SPI_HANDLE pKFTDI, BOOL isBlind)
+FT_STATUS NRF24LU1P_Unbrick_WaitReady(PKFTDI_MPSSE_SPI_HANDLE pKFTDI, BOOL isBlind)
 {
+	FT_STATUS status;
+
 	if (isBlind)
 	{
 		Sleep(10);
+		status = FT_OK;
 	}
 	else
 	{
-		NRF24L_Status_Wait_Ready(pKFTDI, NULL);
+		status = NRF24L_Status_Wait_Ready(pKFTDI, NULL);
 	}
+
+	return status;
 }
 
 FT_STATUS NRF24LU1P_Unbrick_WriteData(PKFTDI_MPSSE_SPI_HANDLE pKFTDI, BOOL isBlind, const WORD address, const void* buffer, DWORD size)
@@ -155,39 +148,33 @@ void NRF24LU1P_Unbrick(PKFTDI_MPSSE_SPI_HANDLE pKFTDI, BOOL bIs16, BOOL isBlind)
 
 	if (!isBlind)
 	{
-		status = Generic_Read_Status(pKFTDI, &s);
-		if (FT_SUCCESS(status))
-		{
-			kprintf(L"Status: 0x%02hhx\n", s);
-		}
-		else PRINT_FT_ERROR(L"Generic_Read_Status", status);
-
-		status = NRF24L_Read_FPCR(pKFTDI, &s);
-		if (FT_SUCCESS(status))
-		{
-			kprintf(L"FPCR  : 0x%02hhx\n", s);
-		}
-		else PRINT_FT_ERROR(L"NRF24L_Read_FPCR", status);
+		FT_FAST_FAIL(Generic_Read_Status(pKFTDI, &s));
+		kprintf(L"Status: 0x%02hhx\n", s);
+		FT_FAST_FAIL(NRF24L_Read_FPCR(pKFTDI, &s));
+		kprintf(L"FPCR  : 0x%02hhx\n", s);
 	}
 
 	kprintf(L"| Write enable for InfoPage\n");
-	status = Generic_Write_Status(pKFTDI, NRF24_STATUS_WEN | NRF24_STATUS_INFEN);
+	FT_FAST_FAIL(Generic_Write_Status(pKFTDI, NRF24_STATUS_WEN | NRF24_STATUS_INFEN));
 	kprintf(L"| Erase InfoPage #0\n");
-	status = Generic_Write_Byte(pKFTDI, NRF24L_ERASE_PAGE, 0x00);
-	NRF24LU1P_Unbrick_WaitReady(pKFTDI, isBlind);
+	FT_FAST_FAIL(Generic_Write_Byte(pKFTDI, NRF24L_ERASE_PAGE, 0x00));
+	FT_FAST_FAIL(NRF24LU1P_Unbrick_WaitReady(pKFTDI, isBlind));
 
 	kprintf(L"| Write enable for MainBlock\n");
-	status = Generic_Write_Status(pKFTDI, NRF24_STATUS_WEN | 0);
+	FT_FAST_FAIL(Generic_Write_Status(pKFTDI, NRF24_STATUS_WEN | 0));
 	kprintf(L"| Erase All\n");
-	status = Generic_Command(pKFTDI, NRF24L_ERASE_ALL);
-	NRF24LU1P_Unbrick_WaitReady(pKFTDI, isBlind);
+	FT_FAST_FAIL(Generic_Command(pKFTDI, NRF24L_ERASE_ALL));
+	FT_FAST_FAIL(NRF24LU1P_Unbrick_WaitReady(pKFTDI, isBlind));
 
 	kprintf(L"| Write NRF24LU1P_USB_BOOTLOADER #1\n");
-	status = NRF24LU1P_Unbrick_WriteData(pKFTDI, isBlind, BootloaderStart, NRF24LU1P_USB_BOOTLOADER_1, sizeof(NRF24LU1P_USB_BOOTLOADER_1));
+	FT_FAST_FAIL(NRF24LU1P_Unbrick_WriteData(pKFTDI, isBlind, BootloaderStart, NRF24LU1P_USB_BOOTLOADER_1, sizeof(NRF24LU1P_USB_BOOTLOADER_1)));
 	kprintf(L"| Write NRF24LU1P_USB_BOOTLOADER #2\n");
-	status = NRF24LU1P_Unbrick_WriteData(pKFTDI, isBlind, BootloaderStart + NRF24LU1P_BOOTLOADER_2ND_PART_OFFSET, NRF24LU1P_USB_BOOTLOADER_2, sizeof(NRF24LU1P_USB_BOOTLOADER_2));
+	FT_FAST_FAIL(NRF24LU1P_Unbrick_WriteData(pKFTDI, isBlind, BootloaderStart + NRF24LU1P_BOOTLOADER_2ND_PART_OFFSET, NRF24LU1P_USB_BOOTLOADER_2, sizeof(NRF24LU1P_USB_BOOTLOADER_2)));
 	kprintf(L"| Write NRF24LU1P_USB_BOOTSTRAP\n");
-	status = NRF24LU1P_Unbrick_WriteData(pKFTDI, isBlind, 0x0000, BootStart, sizeof(BootStart));
+	FT_FAST_FAIL(NRF24LU1P_Unbrick_WriteData(pKFTDI, isBlind, 0x0000, BootStart, sizeof(BootStart)));
 	
 	kprintf(L"< NRF24LU1P_Unbrick\n");
+
+FT_FAIL:
+	;
 }

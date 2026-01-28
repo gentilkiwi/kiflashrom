@@ -325,7 +325,7 @@ void FT_K_DescribeChannel(DWORD dwIndex, FT_DEVICE_LIST_INFO_NODE *pNode)
 		L"\xc3 SerialNumber: %.16S\n"
 		L"\xc0 Description : %.64S\n\n",
 		pNode->Type, (pNode->Type < ARRAYSIZE(FT_K_DEVICES_NAMES)) ? FT_K_DEVICES_NAMES[pNode->Type] : "?",
-		pNode->ID, (WORD)(pNode->ID >> 16), (WORD)pNode->ID,
+		pNode->ID, HIWORD(pNode->ID), LOWORD(pNode->ID),
 		pNode->SerialNumber,
 		pNode->Description
 	);

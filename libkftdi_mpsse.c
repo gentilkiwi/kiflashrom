@@ -1,3 +1,8 @@
+/*	Benjamin DELPY `gentilkiwi`
+	https://blog.gentilkiwi.com
+	benjamin@gentilkiwi.com
+	Licence : https://creativecommons.org/licenses/by/4.0/
+*/
 #include "libkftdi_mpsse.h"
 
 FT_STATUS KFTDI_MPSSE_DirectCommand(FT_HANDLE ftHandle, const BYTE Command, const WORD Data, const BOOL isData)
@@ -51,6 +56,8 @@ FT_STATUS KFTDI_MPSSE_SPI_Open(int deviceNumber, BYTE SpiMode, DWORD Frequency, 
 {
 	FT_STATUS status;
 	BOOL bWasOpened = FALSE;
+	DWORD dwMaxFrequency;
+	BYTE bDivisorCmd;
 
 	FT_FAST_FAIL(FT_Open(deviceNumber, &pKFTDI->ftHandle));
 	bWasOpened = TRUE;
@@ -64,8 +71,19 @@ FT_STATUS KFTDI_MPSSE_SPI_Open(int deviceNumber, BYTE SpiMode, DWORD Frequency, 
 
 	FT_FAST_FAIL(FT_SetBitMode(pKFTDI->ftHandle, 0x00, FT_BITMODE_MPSSE));
 
-	FT_FAST_FAIL(KFTDI_MPSSE_DirectCommand(pKFTDI->ftHandle, KFTDI_MPSSE_CMD_DISABLE_CLK_DIV5, 0, FALSE));
-	FT_FAST_FAIL(KFTDI_MPSSE_DirectCommand(pKFTDI->ftHandle, KFTDI_MPSSE_CMD_SET_CLOCK_DIVISOR, (WORD)((30000000 / Frequency) - 1), TRUE));
+	if (Frequency < KFTDI_MPSSE_MAX_FREQUENCY_WITH_DIV)
+	{
+		bDivisorCmd = KFTDI_MPSSE_CMD_ENABLE_CLK_DIV5;
+		dwMaxFrequency = KFTDI_MPSSE_MAX_FREQUENCY_WITH_DIV;
+	}
+	else
+	{
+		bDivisorCmd = KFTDI_MPSSE_CMD_DISABLE_CLK_DIV5;
+		dwMaxFrequency = KFTDI_MPSSE_MAX_FREQUENCY_WITHOUT_DIV;
+	}
+	FT_FAST_FAIL(KFTDI_MPSSE_DirectCommand(pKFTDI->ftHandle, bDivisorCmd, 0, FALSE));
+	FT_FAST_FAIL(KFTDI_MPSSE_DirectCommand(pKFTDI->ftHandle, KFTDI_MPSSE_CMD_SET_CLOCK_DIVISOR, (WORD)((dwMaxFrequency / Frequency) - 1), TRUE));
+
 	pKFTDI->PinDirAD = PIN_DIR(PIN_SPI_CLK, PIN_OUTPUT) | PIN_DIR(PIN_SPI_MOSI, PIN_OUTPUT) | PIN_DIR(PIN_SPI_MISO, PIN_INPUT) | PIN_DIR(PIN_SPI_CS, PIN_OUTPUT);
 	pKFTDI->PinValAD = PIN_VALUE(PIN_SPI_CLK, PIN_LOW) | PIN_VALUE(PIN_SPI_MOSI, PIN_LOW) | PIN_VALUE(PIN_SPI_CS, PIN_HIGH);
 	FT_FAST_FAIL(KFTDI_MPSSE_DirectCommand(pKFTDI->ftHandle, KFTDI_MPSSE_CMD_GPIO_WRITE_AD, MAKEWORD(pKFTDI->PinValAD, pKFTDI->PinDirAD), TRUE));
