@@ -73,7 +73,7 @@ int wmain(int argc, wchar_t* argv[])
 		{
 			if (GET_CLI_ARG_PRESENT(L"NRF24LU1P")) // does not answer to JEDEC id.
 			{
-				BOOL bIsNRF24LU1P_F16 = GET_CLI_ARG_PRESENT(L"f16"), bIsBlind = GET_CLI_ARG_PRESENT(L"blind"), bIsProg = GET_CLI_ARG_PRESENT(L"prog");
+				BOOL bIsNRF24LU1P_F16 = GET_CLI_ARG_PRESENT(L"f16"), bInfoPage = GET_CLI_ARG_PRESENT(L"infopage"), bIsBlind = GET_CLI_ARG_PRESENT(L"blind"), bIsProg = GET_CLI_ARG_PRESENT(L"prog");
 
 				kprintf(L"\n** NRF24LU1P specifics **\n");
 				if (bIsProg)
@@ -85,11 +85,25 @@ int wmain(int argc, wchar_t* argv[])
 
 				if (GET_CLI_ARG_PRESENT(L"unbrick"))
 				{
-					NRF24LU1P_Unbrick(&hKFTDI, bIsNRF24LU1P_F16, bIsBlind);
+					NRF24LU1P_Unbrick(&hKFTDI, bInfoPage, bIsNRF24LU1P_F16, bIsBlind);
 				}
 
 				if (!bIsBlind)
 				{
+					BYTE InfoBuffer[NRF24LU1P_PAGE_SIZE] = { 0 };
+
+					if (bInfoPage)
+					{
+						kprintf(L"| Enable InfoPage\n");
+						Generic_Write_Status(&hKFTDI, NRF24_STATUS_INFEN);
+						kprintf(L"| Read InfoPage #0\n");
+						Generic_Read_Data(&hKFTDI, GENERIC_OPTION_ADDR2B, 0, InfoBuffer, sizeof(InfoBuffer));
+						kprintf(L"| Disable InfoPage\n");
+						Generic_Write_Status(&hKFTDI, 0);
+						kprintf(L"| InfoPage content:\n");
+						kprinthex16(InfoBuffer, sizeof(InfoBuffer));
+					}
+
 					if (Size == 0)
 					{
 						Size = bIsNRF24LU1P_F16 ? NRF24LU1P_FLASH_SIZE_F16 : NRF24LU1P_FLASH_SIZE_F32;
