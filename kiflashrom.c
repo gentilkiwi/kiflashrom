@@ -10,9 +10,10 @@ int wmain(int argc, wchar_t* argv[])
 	FT_STATUS status;
 	KFTDI_MPSSE_SPI_HANDLE hKFTDI;
 	DWORD dwIndex, libftd2xx = 0, dwFrequency = SPI_CONFIG_DEFAULT_FREQUENCY;
-	LPCWSTR frequency, filename, size;
+	LPCWSTR szGeneric, Filename;
 	BYTE OptAddrSize = GENERIC_OPTION_ADDRNO;
-	DWORD UID, Size = 0;
+	DWORD UID, Address = 0, Size = 0;
+	BOOL bIsWrite = FALSE;
 
 	status = FT_GetLibraryVersion(&libftd2xx);
 	if (!FT_SUCCESS(status))
@@ -36,10 +37,10 @@ int wmain(int argc, wchar_t* argv[])
 	 * 30MHz will be divided by 1, 2, etc., some values will not be exact (obviously like 20 MHz)
 	 * default is SPI_CONFIG_DEFAULT_FREQUENCY (usually 5 MHz)
 	 */
-	if (GET_CLI_ARG(L"frequency", &frequency))
+	if (GET_CLI_ARG(L"frequency", &szGeneric))
 	{
-		dwFrequency = wcstoul(frequency, NULL, 0);
-		kprintf(L"> Using frequency: %s (%lu Hz)\n", frequency, dwFrequency);
+		dwFrequency = wcstoul(szGeneric, NULL, 0);
+		kprintf(L"> Using frequency: %s (%lu Hz)\n", szGeneric, dwFrequency);
 
 		if ((dwFrequency < 100000) || (dwFrequency > KFTDI_MPSSE_MAX_FREQUENCY_WITHOUT_DIV))
 		{
@@ -47,16 +48,28 @@ int wmain(int argc, wchar_t* argv[])
 		}
 	}
 
-	if (GET_CLI_ARG(L"file", &filename))
+	if (GET_CLI_ARG(L"file", &Filename))
 	{
-		kprintf(L"> Using filename: %s\n", filename);
+		kprintf(L"> Using filename: %s\n", Filename);
+
+		if (GET_CLI_ARG_PRESENT(L"write"))
+		{
+			bIsWrite = TRUE;
+			kprintf(L"> Write mode\n");
+		}
 	}
 
-	if (GET_CLI_ARG(L"size", &size))
+	if (GET_CLI_ARG(L"address", &szGeneric))
 	{
-		Size = wcstoul(size, NULL, 0);
-		kprintf(L"> Using data size: %s (%lu bytes)\n", size, Size);
+		Address = wcstoul(szGeneric, NULL, 0);
 	}
+	kprintf(L"> Using data address : 0x%lx\n", Address);
+
+	if (GET_CLI_ARG(L"size", &szGeneric))
+	{
+		Size = wcstoul(szGeneric, NULL, 0);
+	}
+	kprintf(L"> Using data size: 0x%lx (%lu)\n", Size, Size);
 
 	if (argc > 1)
 	{
@@ -73,48 +86,7 @@ int wmain(int argc, wchar_t* argv[])
 		{
 			if (GET_CLI_ARG_PRESENT(L"NRF24LU1P")) // does not answer to JEDEC id.
 			{
-				BOOL bIsNRF24LU1P_F16 = GET_CLI_ARG_PRESENT(L"f16"), bInfoPage = GET_CLI_ARG_PRESENT(L"infopage"), bIsBlind = GET_CLI_ARG_PRESENT(L"blind"), bIsProg = GET_CLI_ARG_PRESENT(L"prog");
-
-				kprintf(L"\n** NRF24LU1P specifics **\n");
-				if (bIsProg)
-				{
-					kprintf(L"| Using PIN #%u for PROG signal\n", NRF24LU1P_PIN_PROG);
-					KFTDI_MPSSE_SPI_GPIO_AD_SetPinDirValue(&hKFTDI, NRF24LU1P_PIN_PROG, PIN_OUTPUT, PIN_HIGH);
-					Sleep(10);
-				}
-
-				if (GET_CLI_ARG_PRESENT(L"unbrick"))
-				{
-					NRF24LU1P_Unbrick(&hKFTDI, bInfoPage, bIsNRF24LU1P_F16, bIsBlind);
-				}
-
-				if (!bIsBlind)
-				{
-					BYTE InfoBuffer[NRF24LU1P_PAGE_SIZE] = { 0 };
-
-					if (bInfoPage)
-					{
-						kprintf(L"| Enable InfoPage\n");
-						Generic_Write_Status(&hKFTDI, NRF24_STATUS_INFEN);
-						kprintf(L"| Read InfoPage #0\n");
-						Generic_Read_Data(&hKFTDI, GENERIC_OPTION_ADDR2B, 0, InfoBuffer, sizeof(InfoBuffer));
-						kprintf(L"| Disable InfoPage\n");
-						Generic_Write_Status(&hKFTDI, 0);
-						kprintf(L"| InfoPage content:\n");
-						kprinthex16(InfoBuffer, sizeof(InfoBuffer));
-					}
-
-					if (Size == 0)
-					{
-						Size = bIsNRF24LU1P_F16 ? NRF24LU1P_FLASH_SIZE_F16 : NRF24LU1P_FLASH_SIZE_F32;
-					}
-					GenericComparedRead(&hKFTDI, GENERIC_OPTION_ADDR2B, Size, filename);
-				}
-
-				if (bIsProg)
-				{
-					KFTDI_MPSSE_SPI_GPIO_AD_SetPinDirValue(&hKFTDI, NRF24LU1P_PIN_PROG, PIN_OUTPUT, PIN_LOW);
-				}
+				NRF24LU1P_Specifics(&hKFTDI, (WORD) Address, (WORD) Size, Filename, bIsWrite, argc, argv);
 			}
 			else
 			{
@@ -161,7 +133,7 @@ int wmain(int argc, wchar_t* argv[])
 
 					if (OptAddrSize && Size)
 					{
-						GenericComparedRead(&hKFTDI, OptAddrSize, Size, filename);
+						GenericComparedRead(&hKFTDI, OptAddrSize, Address, Size, Filename);
 					}
 				}
 				else PRINT_FT_ERROR(L"Read_ID", status);
@@ -175,13 +147,13 @@ int wmain(int argc, wchar_t* argv[])
 	return EXIT_SUCCESS;
 }
 
-void GenericComparedRead(PKFTDI_MPSSE_SPI_HANDLE pKFTDI, BYTE OptAddrSize, DWORD Size, PCWSTR filename)
+void GenericComparedRead(PKFTDI_MPSSE_SPI_HANDLE pKFTDI, BYTE OptAddrSize, DWORD Address, DWORD Size, PCWSTR filename)
 {
 	FT_STATUS status;
 	BYTE *buffer, i, isHashOK = 1, Hash[32], HashToComp[32];
 	FILETIME ft_start, ft_end;
 
-	kprintf(L"\nCompared read for %lu byte(s) - %hhu iteration(s)\n", Size, (BYTE) COMPARED_READ_ITERATIONS);
+	kprintf(L"\nCompared read @ 0x%lx for %lu byte(s) - %hhu iteration(s)\n", Address, Size, (BYTE)COMPARED_READ_ITERATIONS);
 	buffer = LocalAlloc(LPTR, Size);
 	if (buffer)
 	{
@@ -189,7 +161,7 @@ void GenericComparedRead(PKFTDI_MPSSE_SPI_HANDLE pKFTDI, BYTE OptAddrSize, DWORD
 		{
 			isHashOK = 0;
 			GetSystemTimeAsFileTime(&ft_start);
-			status = Generic_Read_Data(pKFTDI, OptAddrSize, 0, buffer, Size);
+			status = Generic_Read_Data(pKFTDI, OptAddrSize, Address, buffer, Size);
 			GetSystemTimeAsFileTime(&ft_end);
 			if (FT_SUCCESS(status))
 			{

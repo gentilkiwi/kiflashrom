@@ -41,6 +41,36 @@ FT_FAIL:
 	return status;
 }
 
+FT_STATUS NRF24LU1P_WriteData(PKFTDI_MPSSE_SPI_HANDLE pKFTDI, const WORD address, const void* buffer, DWORD size, BOOL bWithErase)
+{
+	FT_STATUS status = FT_INVALID_ARGS;
+	DWORD offset, bytesToWrite, bytesLeftInPage;
+	WORD page;
+
+	if (bWithErase)
+	{
+		for (page = address / NRF24LU1P_PAGE_SIZE; page <= (address + size - 1) / NRF24LU1P_PAGE_SIZE; page++)
+		{
+			FT_FAST_FAIL(NRF24L_Write_Enable_Confirmed(pKFTDI));
+			FT_FAST_FAIL(Generic_Write_Byte(pKFTDI, NRF24L_ERASE_PAGE, page));
+			FT_FAST_FAIL(NRF24L_Status_Wait_Ready(pKFTDI, NULL));
+		}
+	}
+
+	for (offset = 0; offset < size; offset += bytesToWrite)
+	{
+		bytesLeftInPage = NRF24LU1P_PAGE_SIZE - ((address + offset) % NRF24LU1P_PAGE_SIZE);
+		bytesToWrite = min(min(NRF24LU1P_FLASH_PROGRAM_SIZE, bytesLeftInPage), size - offset);
+
+		FT_FAST_FAIL(NRF24L_Write_Enable_Confirmed(pKFTDI));
+		FT_FAST_FAIL(Generic_Write_Data(pKFTDI, GENERIC_OPTION_ADDR2B, address + offset, (BYTE*)buffer + offset, bytesToWrite));
+		FT_FAST_FAIL(NRF24L_Status_Wait_Ready(pKFTDI, NULL));
+	}
+
+FT_FAIL:
+	return status;
+}
+
 /* This part of the USB bootloader firmware start at:
  * 
  * - 0x7800 - on 32k version (nRF24LU1P-F32 / 24LU1P)
@@ -51,6 +81,9 @@ FT_FAIL:
  * Remark: it will be *described* on USB as: nRF24LU1P-F32 BOOT LDR - even if F16 version
  * 
  * it comes from: boot24lu1p-f32.hex (nRFgo Studio/hex)
+ * 
+ * F32: 0a2b66595e274a38a47539abe3ca85cc819a6218efd312fc4a885abb0bd5d77e
+ * F16: f69434b616ec31a6dc76ea2a20ff192cfbb7811710f8a30c61cf194e920c63a5
  */
 const BYTE NRF24LU1P_USB_BOOTLOADER_1[] = { // NRF24LU1P_BOOTLOADER_START_F*
 	0x78, 0x7f, 0xe4, 0xf6, 0xd8, 0xfd, 0x75, 0x81, 0x61, 0x02, 0x78, 0x0c, 0x75, 0x0a, 0x79, 0x75, 0x0b, 0xa0, 0x75, 0x0c, 0x80, 0x75, 0x0d, 0x00,	0xe4, 0xf5, 0x08, 0xf5, 0x09, 0xc3, 0xe5, 0x09, 0x94, 0x7d, 0xe5, 0x08,	0x94, 0x05, 0x50, 0x1a, 0x05, 0x0b, 0xe5, 0x0b, 0xae, 0x0a, 0x70, 0x02,
@@ -145,52 +178,10 @@ const BYTE NRF24LU1P_USB_BOOTLOADER_CPA_2[] = { // NRF24LU1P_BOOTLOADER_START_F*
 	0x20, 0x00, 0x42, 0x00, 0x4f, 0x00, 0x4f, 0x00, 0x54, 0x00, 0x20, 0x00, 0x4c, 0x00, 0x44, 0x00, 0x52, 0x00, 0x04, 0x03, 0x09, 0x04
 };
 
-FT_STATUS NRF24LU1P_Unbrick_WaitReady(PKFTDI_MPSSE_SPI_HANDLE pKFTDI, BOOL isBlind)
+FT_STATUS NRF24LU1P_Unbrick(PKFTDI_MPSSE_SPI_HANDLE pKFTDI, BOOL bInfoPage, BOOL bIs16)
 {
 	FT_STATUS status;
-
-	if (isBlind)
-	{
-		Sleep(10);
-		status = FT_OK;
-	}
-	else
-	{
-		status = NRF24L_Status_Wait_Ready(pKFTDI, NULL);
-	}
-
-	return status;
-}
-
-FT_STATUS NRF24LU1P_Unbrick_WriteData(PKFTDI_MPSSE_SPI_HANDLE pKFTDI, BOOL isBlind, const WORD address, const void* buffer, DWORD size)
-{
-	FT_STATUS status = FT_INVALID_ARGS;
-	DWORD i;
-
-	for (i = 0; i < size; i += NRF24LU1P_PAGE_SIZE)
-	{
-		status = isBlind ? Generic_Write_Enable(pKFTDI) : NRF24L_Write_Enable_Confirmed(pKFTDI);
-		if (FT_SUCCESS(status))
-		{
-			status = Generic_Write_Data(pKFTDI, GENERIC_OPTION_ADDR2B, address + i, (BYTE *) buffer + i, min(NRF24LU1P_PAGE_SIZE, size - i));
-			if (!FT_SUCCESS(status))
-			{
-				PRINT_FT_ERROR(L"Generic_Write_Data", status);
-				break;
-			}
-			
-			NRF24LU1P_Unbrick_WaitReady(pKFTDI, isBlind);
-		}
-		else PRINT_FT_ERROR(L"NRF24L_Write_Enable_Confirmed/Generic_Write_Enable (data)", status);
-	}
-
-	return status;
-}
-
-void NRF24LU1P_Unbrick(PKFTDI_MPSSE_SPI_HANDLE pKFTDI, BOOL bInfoPage, BOOL bIs16, BOOL isBlind)
-{
-	FT_STATUS status;
-	BYTE s;
+	
 	WORD BootloaderStart = bIs16 ? NRF24LU1P_BOOTLOADER_START_F16 : NRF24LU1P_BOOTLOADER_START_F32;
 	static BYTE BootStart[3] = {0x02,};
 
@@ -198,38 +189,138 @@ void NRF24LU1P_Unbrick(PKFTDI_MPSSE_SPI_HANDLE pKFTDI, BOOL bInfoPage, BOOL bIs1
 
 	kprintf(L"> NRF24LU1P_Unbrick\n| Product   : F%hhu\n| Bootloader: 0x%04hx\n", bIs16 ? 16 : 32, BootloaderStart);
 
-	if (!isBlind)
-	{
-		FT_FAST_FAIL(Generic_Read_Status(pKFTDI, &s));
-		kprintf(L"Status: 0x%02hhx\n", s);
-		FT_FAST_FAIL(NRF24L_Read_FPCR(pKFTDI, &s));
-		kprintf(L"FPCR  : 0x%02hhx\n", s);
-	}
-
-	if (bInfoPage) // some ChipId can be stored (and used) in this page
-	{
-		kprintf(L"| Write enable for InfoPage\n");
-		FT_FAST_FAIL(Generic_Write_Status(pKFTDI, NRF24_STATUS_WEN | NRF24_STATUS_INFEN));
-		kprintf(L"| Erase InfoPage #0\n");
-		FT_FAST_FAIL(Generic_Write_Byte(pKFTDI, NRF24L_ERASE_PAGE, 0x00));
-		FT_FAST_FAIL(NRF24LU1P_Unbrick_WaitReady(pKFTDI, isBlind));
-	}
-
 	kprintf(L"| Write enable for MainBlock\n");
 	FT_FAST_FAIL(Generic_Write_Status(pKFTDI, NRF24_STATUS_WEN | 0));
 	kprintf(L"| Erase All\n");
 	FT_FAST_FAIL(Generic_Command(pKFTDI, NRF24L_ERASE_ALL));
-	FT_FAST_FAIL(NRF24LU1P_Unbrick_WaitReady(pKFTDI, isBlind));
+	FT_FAST_FAIL(NRF24L_Status_Wait_Ready(pKFTDI, NULL));
 
+	if (bInfoPage) // some ChipId can be stored (and used) in this page, in some locked configuration MainBlock should have been erased **before** InfoPage
+	{
+		kprintf(L"| Write enable for InfoPage\n");
+		FT_FAST_FAIL(Generic_Write_Status(pKFTDI, NRF24_STATUS_WEN | NRF24_STATUS_INFEN));
+		kprintf(L"| Erase InfoPage\n");
+		FT_FAST_FAIL(Generic_Write_Byte(pKFTDI, NRF24L_ERASE_PAGE, 0x00));
+		FT_FAST_FAIL(NRF24L_Status_Wait_Ready(pKFTDI, NULL));
+		kprintf(L"| Going back to MainBlock\n");
+		FT_FAST_FAIL(Generic_Write_Status(pKFTDI, /*NRF24_STATUS_WEN | */0));
+	}
+
+	// We don't have to deal with individual ERASE_PAGE as we did ERASE_ALL first
 	kprintf(L"| Write NRF24LU1P_USB_BOOTLOADER #1\n");
-	FT_FAST_FAIL(NRF24LU1P_Unbrick_WriteData(pKFTDI, isBlind, BootloaderStart, NRF24LU1P_USB_BOOTLOADER_1, sizeof(NRF24LU1P_USB_BOOTLOADER_1)));
+	FT_FAST_FAIL(NRF24LU1P_WriteData(pKFTDI, BootloaderStart, NRF24LU1P_USB_BOOTLOADER_1, sizeof(NRF24LU1P_USB_BOOTLOADER_1), FALSE));
 	kprintf(L"| Write NRF24LU1P_USB_BOOTLOADER #2\n");
-	FT_FAST_FAIL(NRF24LU1P_Unbrick_WriteData(pKFTDI, isBlind, BootloaderStart + NRF24LU1P_BOOTLOADER_2ND_PART_OFFSET, NRF24LU1P_USB_BOOTLOADER_2, sizeof(NRF24LU1P_USB_BOOTLOADER_2)));
+	FT_FAST_FAIL(NRF24LU1P_WriteData(pKFTDI, BootloaderStart + NRF24LU1P_BOOTLOADER_2ND_PART_OFFSET, NRF24LU1P_USB_BOOTLOADER_2, sizeof(NRF24LU1P_USB_BOOTLOADER_2), FALSE));
 	kprintf(L"| Write NRF24LU1P_USB_BOOTSTRAP\n");
-	FT_FAST_FAIL(NRF24LU1P_Unbrick_WriteData(pKFTDI, isBlind, 0x0000, BootStart, sizeof(BootStart)));
-	
+	FT_FAST_FAIL(NRF24LU1P_WriteData(pKFTDI, 0x0000, BootStart, sizeof(BootStart), FALSE));
+
 	kprintf(L"< NRF24LU1P_Unbrick\n");
 
 FT_FAIL:
-	;
+	return status;
+}
+
+void NRF24LU1P_Specifics(PKFTDI_MPSSE_SPI_HANDLE pKFTDI, WORD Address, WORD Size, LPCWSTR Filename, BOOL bIsWrite, int argc, wchar_t* argv[])
+{
+	FT_STATUS status;
+	BOOL bIsNRF24LU1P_F16 = GET_CLI_ARG_PRESENT(L"f16"), bInfoPage = GET_CLI_ARG_PRESENT(L"infopage"), bIsProg = GET_CLI_ARG_PRESENT(L"prog");
+	BYTE s, *pbData, Hash[32];
+	DWORD cbData;
+	WORD MaxSize = bIsNRF24LU1P_F16 ? NRF24LU1P_FLASH_SIZE_F16 : NRF24LU1P_FLASH_SIZE_F32;
+
+	kprintf(L"\n** NRF24LU1P specifics **\n");
+	if (bIsProg)
+	{
+		kprintf(L"| Using PIN #%u for PROG signal\n", NRF24LU1P_PIN_PROG);
+		FT_FAST_FAIL(KFTDI_MPSSE_SPI_GPIO_AD_SetPinDirValue(pKFTDI, NRF24LU1P_PIN_PROG, PIN_OUTPUT, PIN_HIGH));
+		Sleep(10);
+	}
+
+	FT_FAST_FAIL(Generic_Read_Status(pKFTDI, &s));
+	kprintf(L"Status: 0x%02hhx\n", s);
+	if (s == 0xff)
+	{
+		kprintf(L"!! WARNING !! Something is probably wrong on the SPI bus\n");
+	}
+
+	FT_FAST_FAIL(NRF24L_Read_FPCR(pKFTDI, &s));
+	kprintf(L"FPCR  : 0x%02hhx\n", s);
+	if (s == 0xff)
+	{
+		kprintf(L"!! WARNING !! Something is probably wrong on the SPI bus\n");
+	}
+
+	if (GET_CLI_ARG_PRESENT(L"unbrick"))
+	{
+		FT_FAST_FAIL(NRF24LU1P_Unbrick(pKFTDI, bInfoPage, bIsNRF24LU1P_F16));
+
+		Address = 0x0000;
+		Size = MaxSize;
+		bIsWrite = FALSE;
+		bInfoPage = FALSE;
+	}
+
+	if (bInfoPage)
+	{
+		kprintf(L"| Enable InfoPage\n");
+		FT_FAST_FAIL(Generic_Write_Status(pKFTDI, NRF24_STATUS_INFEN));
+		MaxSize = NRF24LU1P_PAGE_SIZE;
+	}
+
+	if (bIsWrite)
+	{
+		if (kull_m_file_readData(Filename, &pbData, &cbData))
+		{
+			kprintf(L"> File: \'%s\' is %lu byte(s)\n", Filename, cbData);
+			Size = (!Size) ? (WORD) cbData : min((WORD)cbData, Size);
+			
+			kprintf(L"> Target size is: %hu\n", Size);
+
+			if ((Address + Size) <= MaxSize)
+			{
+				if (kull_m_crypto_hash_sha256(pbData, Size, Hash))
+				{
+					kprintf(L"> Target hash: ");
+					kprinthex(Hash, sizeof(Hash));
+					kprintf(L"> Writing 0x%hx (%hu) bytes @ 0x%hx (with ERASE_PAGE before)...\n", Size, Size, Address);
+					status = NRF24LU1P_WriteData(pKFTDI, Address, pbData, Size, TRUE);
+					if (FT_SUCCESS(status))
+					{
+						status = Generic_Read_Data(pKFTDI, GENERIC_OPTION_ADDR2B, Address, pbData, Size);
+						if (FT_SUCCESS(status))
+						{
+							if (kull_m_crypto_hash_sha256(pbData, Size, Hash))
+							{
+								kprintf(L"> Readed hash: ");
+								kprinthex(Hash, sizeof(Hash));
+							}
+						}
+					}
+				}
+			}
+			else PRINT_ERROR(L"Incompatible target 0x%hx for %hu bytes (MaxSize is %hu)\n", Address, Size, MaxSize);
+
+			LocalFree(pbData);
+		}
+	}
+	else
+	{
+		if (!Size)
+		{
+			Size = MaxSize - Address;
+		}
+		GenericComparedRead(pKFTDI, GENERIC_OPTION_ADDR2B, Address, Size, Filename);
+	}
+
+FT_FAIL:
+	if (bInfoPage)
+	{
+		kprintf(L"| Disable InfoPage\n");
+		FT_FAST_FAIL(Generic_Write_Status(pKFTDI, 0));
+	}
+
+	if (bIsProg)
+	{
+		KFTDI_MPSSE_SPI_GPIO_AD_SetPinDirValue(pKFTDI, NRF24LU1P_PIN_PROG, PIN_OUTPUT, PIN_LOW);
+	}
 }
