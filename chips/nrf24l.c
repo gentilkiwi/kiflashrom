@@ -286,6 +286,7 @@ void NRF24LU1P_Specifics(PKFTDI_MPSSE_SPI_HANDLE pKFTDI, WORD Address, WORD Size
 					status = NRF24LU1P_WriteData(pKFTDI, Address, pbData, Size, TRUE);
 					if (FT_SUCCESS(status))
 					{
+						kprintf(L"> Reading back...\n");
 						status = Generic_Read_Data(pKFTDI, GENERIC_OPTION_ADDR2B, Address, pbData, Size);
 						if (FT_SUCCESS(status))
 						{
