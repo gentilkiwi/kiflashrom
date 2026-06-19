@@ -4,7 +4,6 @@ on: [workflow_dispatch, push, pull_request]
 env:
   BUILD_PLATFORM: x64
   BUILD_CONFIGURATION: Release
-  BUILD_PLATFORMTOOLSET: v143
 
 jobs:
   build:
@@ -12,15 +11,15 @@ jobs:
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
     - name: Add msbuild to PATH
-      uses: microsoft/setup-msbuild@v2
+      uses: microsoft/setup-msbuild@v3
       with: 
         msbuild-architecture: x64
     - name: Build
-      run: msbuild -maxCpuCount -property:Configuration=${{env.BUILD_CONFIGURATION}},Platform=${{env.BUILD_PLATFORM}},PlatformToolset=${{env.BUILD_PLATFORMTOOLSET}} .
+      run: msbuild -maxCpuCount -property:Configuration=${{env.BUILD_CONFIGURATION}},Platform=${{env.BUILD_PLATFORM}} .
     - name: Upload artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: ${{github.event.repository.name}}_${{env.BUILD_PLATFORM}}
         compression-level: 9
