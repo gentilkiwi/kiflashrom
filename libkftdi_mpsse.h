@@ -7,6 +7,10 @@
 #include <windows.h>
 #include "ftdi/ftd2xx.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define FT_FAST_FAIL(c) \
 	{ \
 		status = c; \
@@ -72,6 +76,8 @@ typedef struct _KFTDI_MPSSE_SPI_HANDLE {
 	FT_HANDLE ftHandle;
 	BYTE PinDirAD;
 	BYTE PinValAD;
+	BYTE PinDirAC;
+	BYTE PinValAC;
 	BYTE Options;
 } KFTDI_MPSSE_SPI_HANDLE, * PKFTDI_MPSSE_SPI_HANDLE;
 
@@ -82,6 +88,12 @@ typedef struct _KFTDI_MPSSE_SPI_HANDLE {
 #define PIN_DIR(n, d)	(d << n)
 #define PIN_VALUE(n, v)	(v << n)
 FT_STATUS KFTDI_MPSSE_SPI_GPIO_AD_SetPinDirValue(PKFTDI_MPSSE_SPI_HANDLE pKFTDI, BYTE Pin, BYTE Dir, BYTE Value);
+FT_STATUS KFTDI_MPSSE_SPI_GPIO_AC_SetPinDirValue(PKFTDI_MPSSE_SPI_HANDLE pKFTDI, BYTE Pin, BYTE Dir, BYTE Value);
+
+FT_STATUS KFTDI_MPSSE_SPI_GPIO_AD_GetPins(PKFTDI_MPSSE_SPI_HANDLE pKFTDI, BYTE* pPins);
+FT_STATUS KFTDI_MPSSE_SPI_GPIO_AD_GetPin(PKFTDI_MPSSE_SPI_HANDLE pKFTDI, BYTE Pin, BYTE* pValue);
+FT_STATUS KFTDI_MPSSE_SPI_GPIO_AC_GetPins(PKFTDI_MPSSE_SPI_HANDLE pKFTDI, BYTE* pPins);
+FT_STATUS KFTDI_MPSSE_SPI_GPIO_AC_GetPin(PKFTDI_MPSSE_SPI_HANDLE pKFTDI, BYTE Pin, BYTE* pValue);
 
 #define PIN_SPI_CLK		0
 #define PIN_SPI_MOSI	1
@@ -97,16 +109,22 @@ FT_STATUS KFTDI_MPSSE_SPI_GPIO_AD_SetPinDirValue(PKFTDI_MPSSE_SPI_HANDLE pKFTDI,
 #define KFTDI_MPSSE_SPI_MODE_BITS	KFTDI_MPSSE_DATA_SHIFTING_BIT_MODE
 
 FT_STATUS KFTDI_MPSSE_SPI_Open(int deviceNumber, BYTE SpiMode, DWORD Frequency, PKFTDI_MPSSE_SPI_HANDLE pKFTDI);
+#define KFTDI_MPSSE_SPI_Close(handle)   FT_Close((handle)->ftHandle)
+FT_STATUS KFTDI_MPSSE_SPI_SetFrequency(PKFTDI_MPSSE_SPI_HANDLE pKFTDI, DWORD Frequency);
 FT_STATUS KFTDI_MPSSE_SPI_DataShift(PKFTDI_MPSSE_SPI_HANDLE pKFTDI, const BYTE* pcbOutData, BYTE* pbInData, WORD szData);
 FT_STATUS KFTDI_MPSSE_SPI_DataShiftEx(PKFTDI_MPSSE_SPI_HANDLE pKFTDI, const BYTE* pcbOutData, BYTE* pbInData, DWORD dwSize);
 
 #define KFTDI_MPSSE_SPI_CS_HIGH(handle)										KFTDI_MPSSE_SPI_GPIO_AD_SetPinDirValue(handle, PIN_SPI_CS, PIN_OUTPUT, PIN_HIGH)
 #define KFTDI_MPSSE_SPI_CS_LOW(handle)										KFTDI_MPSSE_SPI_GPIO_AD_SetPinDirValue(handle, PIN_SPI_CS, PIN_OUTPUT, PIN_LOW)
 
-#define KFTDI_MPSSE_SPI_WRITE(handle, pcbOutData, szData)					KFTDI_MPSSE_SPI_DataShift(handle, pcbOutData, NULL, szData);
-#define KFTDI_MPSSE_SPI_READ(handle, pbInData, szData)						KFTDI_MPSSE_SPI_DataShift(handle, NULL, pbInData, szData);
-#define KFTDI_MPSSE_SPI_WRITE_READ(handle, pcbOutData, pbInData, szData)	KFTDI_MPSSE_SPI_DataShift(handle, pcbOutData, pbInData, szData);
+#define KFTDI_MPSSE_SPI_WRITE(handle, pcbOutData, szData)					KFTDI_MPSSE_SPI_DataShift(handle, pcbOutData, NULL, szData)
+#define KFTDI_MPSSE_SPI_READ(handle, pbInData, szData)						KFTDI_MPSSE_SPI_DataShift(handle, NULL, pbInData, szData)
+#define KFTDI_MPSSE_SPI_WRITE_READ(handle, pcbOutData, pbInData, szData)	KFTDI_MPSSE_SPI_DataShift(handle, pcbOutData, pbInData, szData)
 
-#define KFTDI_MPSSE_SPI_WRITE_EX(handle, pcbOutData, szData)				KFTDI_MPSSE_SPI_DataShiftEx(handle, pcbOutData, NULL, szData);
-#define KFTDI_MPSSE_SPI_READ_EX(handle, pbInData, szData)					KFTDI_MPSSE_SPI_DataShiftEx(handle, NULL, pbInData, szData);
-#define KFTDI_MPSSE_SPI_WRITE_READ_EX(handle, pcbOutData, szData)			KFTDI_MPSSE_SPI_DataShiftEx(handle, pcbOutData, pbInData, szData);
+#define KFTDI_MPSSE_SPI_WRITE_EX(handle, pcbOutData, szData)				KFTDI_MPSSE_SPI_DataShiftEx(handle, pcbOutData, NULL, szData)
+#define KFTDI_MPSSE_SPI_READ_EX(handle, pbInData, szData)					KFTDI_MPSSE_SPI_DataShiftEx(handle, NULL, pbInData, szData)
+#define KFTDI_MPSSE_SPI_WRITE_READ_EX(handle, pcbOutData, pbInData, szData)	KFTDI_MPSSE_SPI_DataShiftEx(handle, pcbOutData, pbInData, szData)
+
+#ifdef __cplusplus
+}
+#endif
